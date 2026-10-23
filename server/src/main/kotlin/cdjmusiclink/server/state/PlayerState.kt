@@ -52,6 +52,10 @@ class PlayerState(val number: Int, val name: String, val address: String) {
     private var beatWithinBar: Int? = null
     private var position: Position? = null
     private var track: Track? = null
+    private var trackLoaded = false
+
+    /** 現在のスタブと一致しなかった最新のメタデータ。後から一致するスタブができたら適用する。 */
+    private var pendingMetadata: Track? = null
 
     fun applyStatus(s: StatusSnapshot, mixerPresent: Boolean, now: Long): Set<Change> {
         val changes = mutableSetOf<Change>()
@@ -78,17 +82,27 @@ class PlayerState(val number: Int, val name: String, val address: String) {
         beatNumber = s.beatNumber
         beatWithinBar = s.beatWithinBar
         updatedAt = now
+        trackLoaded = s.trackLoaded
 
         val current = track
         if (s.trackLoaded) {
             val changed = current == null || current.id != s.rekordboxId || current.sourcePlayer != s.sourcePlayer ||
                 current.slot != s.slot || current.type != s.type
             if (changed) {
-                track = stub(s)
+                val stub = stub(s)
+                val pending = pendingMetadata
+                track = if (pending != null && sameTrack(stub, pending)) {
+                    pendingMetadata = null
+                    merge(stub, pending)
+                } else {
+                    stub
+                }
                 changes += Change.TRACK
             }
         } else if (current != null) {
             track = null
+            position = null
+            pendingMetadata = null
             changes += Change.TRACK
         }
         return changes
@@ -98,18 +112,30 @@ class PlayerState(val number: Int, val name: String, val address: String) {
         position = Position(ms, totalMs?.let { it - ms }, now, definitive)
     }
 
-    /** 現在のトラックと同一なら置き換える。null は解除。変化があれば true。 */
+    fun clearPosition() {
+        position = null
+    }
+
+    /**
+     * 現在のトラックと同一なら置き換える。一致しなければ保留し、後で一致するスタブができたときに適用する。
+     * null は直近のステータスで曲がロードされていれば無視する(アンロードは [applyStatus] が扱う)。
+     * MetadataFinder は曲替わりの null と新しいメタデータをステータスと前後して届けるため。変化があれば true。
+     */
     fun applyMetadata(track: Track?): Boolean {
         val current = this.track
         if (track == null) {
+            if (trackLoaded) return false
+            pendingMetadata = null
             this.track = null
             return current != null
         }
-        if (current == null || current.id != track.id || current.sourcePlayer != track.sourcePlayer ||
-            current.slot != track.slot
-        ) return false
-        this.track = track
-        return track != current
+        if (current == null || !sameTrack(current, track)) {
+            pendingMetadata = track
+            return false
+        }
+        val merged = merge(current, track)
+        this.track = merged
+        return merged != current
     }
 
     /** null の項目は変更しない。変化があれば true。 */
@@ -133,6 +159,15 @@ class PlayerState(val number: Int, val name: String, val address: String) {
         trackBpm = trackBpm, pitch = pitch, tempo = tempo,
         beatNumber = beatNumber, beatWithinBar = beatWithinBar,
         position = position, track = track,
+    )
+
+    private fun sameTrack(a: Track, b: Track) = a.id == b.id && a.sourcePlayer == b.sourcePlayer && a.slot == b.slot
+
+    /** メタデータで置き換えつつ、既に立っている可用性フラグは落とさない。 */
+    private fun merge(current: Track, md: Track) = md.copy(
+        artworkAvailable = md.artworkAvailable || current.artworkAvailable,
+        waveformAvailable = md.waveformAvailable || current.waveformAvailable,
+        beatgridAvailable = md.beatgridAvailable || current.beatgridAvailable,
     )
 
     private fun stub(s: StatusSnapshot) = Track(

@@ -7,6 +7,7 @@ import cdjmusiclink.server.model.trackTypeOf
 import cdjmusiclink.server.state.BeatEvent
 import cdjmusiclink.server.state.BeatPosition
 import cdjmusiclink.server.state.BeatWaveform
+import cdjmusiclink.server.state.Change
 import cdjmusiclink.server.state.StatusSnapshot
 import cdjmusiclink.server.state.Store
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +31,7 @@ import org.deepsymmetry.beatlink.data.BeatGridListener
 import org.deepsymmetry.beatlink.data.BeatGridUpdate
 import org.deepsymmetry.beatlink.data.MetadataFinder
 import org.deepsymmetry.beatlink.data.TimeFinder
+import org.deepsymmetry.beatlink.data.TrackMetadata
 import org.deepsymmetry.beatlink.data.TrackMetadataListener
 import org.deepsymmetry.beatlink.data.TrackMetadataUpdate
 import org.deepsymmetry.beatlink.data.TrackPositionListener
@@ -121,7 +123,29 @@ object Listeners {
 
     private fun totalMs(player: Int): Long? =
         WaveformFinder.getInstance().getLatestDetailFor(player)?.totalTime
-            ?: MetadataFinder.getInstance().getLatestMetadataFor(player)?.duration?.times(1000L)
+            ?: MetadataFinder.getInstance().getLatestMetadataFor(player)?.duration?.takeIf { it > 0 }?.times(1000L)
+
+    private fun trackOf(player: Int, md: TrackMetadata) = md.toTrack(
+        md.trackReference,
+        artwork = ArtFinder.getInstance().getLatestArtFor(player) != null,
+        waveform = WaveformFinder.getInstance().getLatestPreviewFor(player) != null,
+        beatgrid = BeatGridFinder.getInstance().getLatestBeatGridFor(player) != null,
+    )
+
+    /**
+     * 曲替わりでスタブを作った直後に、MetadataFinder が既に持っているメタデータを引いて当てる。
+     * メタデータがステータスより先に届いた場合、beat-link は再配送しないため。
+     */
+    private fun pullMetadata(store: Store, s: CdjStatus) {
+        val finder = MetadataFinder.getInstance()
+        if (!finder.isRunning) return
+        val n = s.deviceNumber
+        val md = finder.getLatestMetadataFor(n) ?: return
+        val ref = md.trackReference
+        if (ref.rekordboxId == s.rekordboxId && ref.player == s.trackSourcePlayer && ref.slot == s.trackSourceSlot) {
+            store.metadata(n, trackOf(n, md))
+        }
+    }
 
     /**
      * 全リスナーを登録する。冪等で、登録済みなら既存のハンドルを返す。
@@ -156,7 +180,9 @@ object Listeners {
                         // 位置不明時（登録直後を含む）は null が来る。非 null 型にすると Kotlin の引数チェックで
                         // addTrackPositionListener ごと例外になり、TimeFinder 側に登録だけが残る。
                         TrackPositionListener { u: TrackPositionUpdate? ->
-                            if (u != null) guarded("movementChanged") { store.position(n, u.milliseconds, u.definitive, totalMs(n)) }
+                            guarded("movementChanged") {
+                                if (u != null) store.position(n, u.milliseconds, u.definitive, totalMs(n)) else store.clearPosition(n)
+                            }
                         }.also { TimeFinder.getInstance().addTrackPositionListener(n, it) }
                     }
                 }
@@ -171,7 +197,12 @@ object Listeners {
         }
 
         val update = DeviceUpdateListener { u: DeviceUpdate ->
-            if (u is CdjStatus) guarded("status") { store.status(u.deviceNumber, snapshotOf(u)) }
+            if (u is CdjStatus) {
+                guarded("status") {
+                    val changes = store.status(u.deviceNumber, snapshotOf(u))
+                    if (Change.TRACK in changes && u.isTrackLoaded) pullMetadata(store, u)
+                }
+            }
         }
 
         val beat = BeatListener { b: Beat ->
@@ -203,14 +234,7 @@ object Listeners {
         val metadata = TrackMetadataListener { u: TrackMetadataUpdate ->
             guarded("metadataChanged") {
                 val p = u.player
-                val md = u.metadata
-                val track = md?.toTrack(
-                    md.trackReference,
-                    artwork = ArtFinder.getInstance().getLatestArtFor(p) != null,
-                    waveform = WaveformFinder.getInstance().getLatestPreviewFor(p) != null,
-                    beatgrid = BeatGridFinder.getInstance().getLatestBeatGridFor(p) != null,
-                )
-                store.metadata(p, track)
+                store.metadata(p, u.metadata?.let { trackOf(p, it) })
             }
         }
 

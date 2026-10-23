@@ -48,9 +48,38 @@ class StoreTest {
         events.clear()
         val track = store.player(1)!!.track!!.copy(title = "T")
         store.metadata(1, track)
+        store.metadata(1, null) // 曲がロードされている間の null は無視
+        assertEquals(listOf<Any>(TrackEvent(1, track).copy(id = events[0].id)), events)
+        assertEquals("T", store.player(1)!!.track!!.title)
+    }
+
+    @Test
+    fun metadataBeforeStubIsDeliveredWithTrackEvent() = runTest(UnconfinedTestDispatcher()) {
+        val bus = EventBus(); val store = Store(bus) { 1000 }
+        val events = collect(bus)
+        store.upsertDevice(cdj)
+        store.status(1, snap(id = 5))
+        val next = store.player(1)!!.track!!.copy(id = 9, title = "Next")
+        events.clear()
         store.metadata(1, null)
-        assertEquals(listOf<Any>(TrackEvent(1, track).copy(id = events[0].id), TrackEvent(1, null).copy(id = events[1].id)), events)
-        assertNull(store.player(1)!!.track)
+        store.metadata(1, next)
+        assertTrue(events.none { it is TrackEvent })
+        val changes = store.status(1, snap(id = 9))
+        assertTrue(Change.TRACK in changes)
+        val te = events.filterIsInstance<TrackEvent>().single()
+        assertEquals("Next", te.track!!.title)
+    }
+
+    @Test
+    fun clearPositionRemovesPosition() = runTest(UnconfinedTestDispatcher()) {
+        val bus = EventBus(); val store = Store(bus) { 1000 }
+        store.upsertDevice(cdj)
+        store.status(1, snap())
+        store.position(1, 500, true, null)
+        assertEquals(500L, store.player(1)!!.position!!.ms)
+        store.clearPosition(1)
+        assertNull(store.player(1)!!.position)
+        store.clearPosition(7) // unknown player: ignored
     }
 
     @Test

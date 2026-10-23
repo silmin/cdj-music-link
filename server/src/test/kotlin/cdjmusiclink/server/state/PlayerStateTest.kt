@@ -4,6 +4,7 @@ import cdjmusiclink.server.model.PlayState
 import cdjmusiclink.server.model.Slot
 import cdjmusiclink.server.model.TrackType
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -104,7 +105,92 @@ class PlayerStateTest {
         assertEquals("Full", s.toDto().track!!.title)
         s.applyAvailability(true, null, false)
         assertTrue(s.toDto().track!!.artworkAvailable)
+    }
+
+    @Test
+    fun metadataNullWhileLoadedIsIgnored() {
+        val s = state()
+        s.applyStatus(snap(id = 5), true, 10)
+        val stub = s.toDto().track!!
+        assertFalse(s.applyMetadata(null))
+        assertEquals(stub, s.toDto().track)
+        s.applyMetadata(stub.copy(title = "Full"))
+        assertFalse(s.applyMetadata(null))
+        assertEquals("Full", s.toDto().track!!.title)
+    }
+
+    @Test
+    fun metadataArrivingBeforeStubIsAppliedOnStub() {
+        val s = state()
+        s.applyStatus(snap(id = 5), true, 10)
+        val old = s.toDto().track!!
+        // 新しい曲のメタデータが、その曲を示すステータスより先に届く
+        assertFalse(s.applyMetadata(old.copy(id = 9, title = "Next")))
+        assertNull(s.toDto().track!!.title)
+        val changes = s.applyStatus(snap(id = 9), true, 20)
+        assertTrue(Change.TRACK in changes)
+        assertEquals(9, s.toDto().track!!.id)
+        assertEquals("Next", s.toDto().track!!.title)
+    }
+
+    @Test
+    fun nullThenMetadataAfterStubKeepsTitle() {
+        val s = state()
+        s.applyStatus(snap(id = 5), true, 10)
+        s.applyMetadata(s.toDto().track!!.copy(title = "Old"))
+        s.applyStatus(snap(id = 9), true, 20)
+        val stub = s.toDto().track!!
+        assertEquals(9, stub.id)
         s.applyMetadata(null)
+        assertEquals(stub, s.toDto().track)
+        assertTrue(s.applyMetadata(stub.copy(title = "New")))
+        assertEquals("New", s.toDto().track!!.title)
+    }
+
+    @Test
+    fun metadataPreservesAvailabilityFlags() {
+        val s = state()
+        s.applyStatus(snap(id = 5), true, 10)
+        val stub = s.toDto().track!!
+        s.applyAvailability(true, true, null)
+        s.applyMetadata(stub.copy(title = "Full", artworkAvailable = false, waveformAvailable = false, beatgridAvailable = true))
+        val t = s.toDto().track!!
+        assertEquals("Full", t.title)
+        assertTrue(t.artworkAvailable)
+        assertTrue(t.waveformAvailable)
+        assertTrue(t.beatgridAvailable)
+    }
+
+    @Test
+    fun pendingMetadataClearedOnUnload() {
+        val s = state()
+        s.applyStatus(snap(id = 5), true, 10)
+        s.applyMetadata(s.toDto().track!!.copy(id = 9, title = "Next"))
+        s.applyStatus(snap(trackLoaded = false, playing = false), true, 20)
+        s.applyStatus(snap(id = 9), true, 30)
+        assertNull(s.toDto().track!!.title)
+    }
+
+    @Test
+    fun metadataNullAfterUnloadKeepsTrackNull() {
+        val s = state()
+        s.applyStatus(snap(id = 5), true, 10)
+        s.applyStatus(snap(trackLoaded = false, playing = false), true, 20)
+        assertFalse(s.applyMetadata(null))
         assertNull(s.toDto().track)
+    }
+
+    @Test
+    fun positionClearedOnUnload() {
+        val s = state()
+        s.applyStatus(snap(id = 5), true, 10)
+        s.applyPosition(1000, true, 5000, 11)
+        assertEquals(1000, s.toDto().position!!.ms)
+        s.applyStatus(snap(trackLoaded = false, playing = false), true, 20)
+        assertNull(s.toDto().position)
+        s.applyStatus(snap(id = 5), true, 30)
+        s.applyPosition(1000, true, 5000, 31)
+        s.clearPosition()
+        assertNull(s.toDto().position)
     }
 }

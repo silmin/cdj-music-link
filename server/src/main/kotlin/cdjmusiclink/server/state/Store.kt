@@ -40,21 +40,30 @@ class Store(private val bus: EventBus, private val clock: () -> Long) {
 
     fun player(n: Int): Player? = lock.withLock { states[n]?.toDto() }
 
-    fun status(n: Int, s: StatusSnapshot) = mutate {
-        val existing = states[n]
-        val state = existing ?: run {
-            val dev = devices[n]
-            PlayerState(n, dev?.name ?: "", dev?.address ?: "").also { states[n] = it }
+    /** 適用した変化の種類を返す。 */
+    fun status(n: Int, s: StatusSnapshot): Set<Change> {
+        var changes: Set<Change> = emptySet()
+        mutate {
+            val existing = states[n]
+            val state = existing ?: run {
+                val dev = devices[n]
+                PlayerState(n, dev?.name ?: "", dev?.address ?: "").also { states[n] = it }
+            }
+            changes = state.applyStatus(s, mixerPresent(), clock())
+            val out = mutableListOf<Event>()
+            if (existing == null || changes.isNotEmpty()) out += PlayerEvent(state.toDto())
+            if (Change.TRACK in changes) out += TrackEvent(n, state.track())
+            out
         }
-        val changes = state.applyStatus(s, mixerPresent(), clock())
-        val out = mutableListOf<Event>()
-        if (existing == null || changes.isNotEmpty()) out += PlayerEvent(state.toDto())
-        if (Change.TRACK in changes) out += TrackEvent(n, state.track())
-        out
+        return changes
     }
 
     fun position(n: Int, ms: Long, definitive: Boolean, totalMs: Long?) {
         lock.withLock { states[n]?.applyPosition(ms, definitive, totalMs, clock()) }
+    }
+
+    fun clearPosition(n: Int) {
+        lock.withLock { states[n]?.clearPosition() }
     }
 
     fun metadata(n: Int, track: Track?) = mutate {
