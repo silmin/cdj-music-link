@@ -58,6 +58,11 @@ sudo systemctl enable --now avahi-daemon
 
 ## 5. 起動
 
+GHCR のパッケージは既定で private。`pull` の前に次のどちらかを済ませる。
+
+- GitHub のパッケージ設定で `cdj-music-link-server` と `cdj-music-link-fake-cdj` の 2 つを public にする
+- Pi 上で `read:packages` だけを持つトークンを使い `docker login ghcr.io -u <GitHubユーザー名>` する
+
 ```sh
 git clone https://github.com/silmin/cdj-music-link.git
 cd cdj-music-link

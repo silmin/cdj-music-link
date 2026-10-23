@@ -23,10 +23,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.beat.link)
     implementation(libs.slf4j.simple)
-    implementation(libs.swagger.request.validator.core)
     implementation(libs.swagger.ui)
 
     testImplementation(project(":fake-cdj"))
+    testImplementation(libs.swagger.request.validator.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(platform(libs.junit.bom))

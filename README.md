@@ -51,7 +51,7 @@ open http://localhost:17080/docs
 
 | event | いつ |
 |---|---|
-| `snapshot` | 接続直後に 1 回(プレイヤー一覧とマスター) |
+| `snapshot` | 接続直後に 1 回(`players`, `master`, `devices`, `online`, `serverTime`) |
 | `beat` | 拍ごと |
 | `player` | 再生状態・on-air・sync・master・ループのいずれかが変わった |
 | `track` | 曲が変わった、またはメタデータが揃った |
@@ -90,7 +90,7 @@ scripts/dev-setup-macos.sh   # macOS での開発セットアップ
 - Pro DJ Link 対応ミキサーが LAN にいなければ `isOnAir` は null。
 - 音声レベルは Pro DJ Link に乗らないため取れない。
 - 読み取り専用、認証なし。LAN 内での利用が前提。
-- beat-link 8.0.0 は、ビートグリッドのない曲で TimeFinder が NullPointerException をログに出す既知の問題がある(upstream で修正済み、未リリース)。
+- beat-link 8.0.0 の既知の問題(ビートグリッドのない曲で TimeFinder が NullPointerException をログに出す)。
 
 ## ライセンス
 

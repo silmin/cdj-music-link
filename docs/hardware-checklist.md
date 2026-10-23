@@ -15,6 +15,7 @@
 
 - [ ] USB の解析済み曲をロード → `/v1/players/{n}/track` の `title` が埋まるまで ____ 秒(NFS 経路)
 - [ ] CD または未解析曲をロード → `title` が埋まるまで ____ 秒(dbserver 経路。`deviceNumber` が 4 以下のときのみ)
+- [ ] 曲を切り替える / 同じ曲を別デッキにロードする → `track.title` が ____ 秒以内に埋まり、ロード中に `track: null` の `track` イベントが出ない
 - [ ] `/v1/players/{n}/artwork`、`/waveform/preview`、`/waveform/detail`、`/beatgrid` がデータを返す
 
 ## 再生状態

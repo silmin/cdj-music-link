@@ -1,4 +1,5 @@
-FROM gradle:9.7.1-jdk25 AS builder
+# バイトコードはプラットフォーム非依存なので、ビルドはビルドホストのネイティブで行う
+FROM --platform=$BUILDPLATFORM gradle:9.7.1-jdk25 AS builder
 WORKDIR /src
 COPY . .
 RUN gradle :fake-cdj:installDist --no-daemon
