@@ -20,3 +20,6 @@ Task 10: review clean (deliverables); minor (deferred): Dockerfiles COPY . . bef
 ## 最終再レビューで残った観察
 - Conversions.toTrack は duration 0 を durationSec=0 のまま返す(remainingMs 側は null 化済み)
 - アンロード直後に遅れて届いた位置更新が position を再設定しうる(非ブロッキング)
+
+## CI の非推奨警告(2026-10-24 の初回 run)
+- `actions/setup-java@v4` は非推奨(最新 v6)、`actions/checkout@v4` 等は Node 20 対象で Node 24 強制実行の警告。動作に影響なし。使っている action はいずれも 1〜3 メジャー遅れ(checkout v7、gradle/actions v6、docker 系 v4/v7)なので、入力名の変更を確認してからまとめて上げる
