@@ -1,7 +1,7 @@
 # cdj-music-link 設計書
 
 日付: 2026-10-24
-状態: ドラフト(レビュー前)
+状態: レビュー済み(2026-10-24、ビルダーチェックの質問を反映)
 
 ## 1. 意図
 
@@ -13,7 +13,7 @@ API の利用者は固定ではない。「今かかっている曲を表示す�
 
 **ゴール**
 
-- Pi が CDJ に認識され、2 台の NXS2 と rekordbox link 1 台の状態を取り続ける。
+- Pi が CDJ に認識され、2 台の NXS2 の状態を取り続ける。DJ は USB を持ち込む前提。
 - `GET` で現在状態、`SSE` で「1 秒に 1 回ポーリングしても間に合わないもの」だけを流す。
 - OpenAPI 3 の仕様をリポジトリに置き、Swagger UI で叩ける。
 - 実機なしで、偽 CDJ を使った Docker Compose 環境で端から端まで動作確認できる。
@@ -27,6 +27,7 @@ API の利用者は固定ではない。「今かかっている曲を表示す�
 - Rust `prolink serve` によるメタデータ側のエミュレーション(compose の profile として入口だけ残す)。
 - CDJ-3000 の 30 ms 位置、Opus Quad、XDJ-AZ の固有対応。beat-link が持っている分は自然に動くが、テストしない。
 - 音声レベル。Pro DJ Link には乗らない。
+- PC DJ(自分の PC とオーディオ IF で再生する人)の曲情報。その PC は Pro DJ Link に参加しないので、API からは CDJ が止まっているようにしか見えない。制約として README に明記する。
 
 **アンチゴール(これになったら失敗)**
 
@@ -36,10 +37,14 @@ API の利用者は固定ではない。「今かかっている曲を表示す�
 
 ## 3. 制約と前提
 
-- 機材: CDJ-2000NXS2 ×2、DJM、rekordbox link 1 台。rekordbox 解析済みの USB/SD 再生が主。
+- 機材: CDJ-2000NXS2 ×2。DJ は rekordbox 解析済みの USB を持ち込む。rekordbox を LAN に繋いだ PC からロードする運用(Link Export)は想定しないが、下の番号設定により動けば動く。
+- ミキサーが Pro DJ Link 対応で LAN に繋がるかは未定。繋がれば on-air(客に聞こえているチャンネル)が取れる。繋がらなければ取れない。両方で動くように `isOnAir` は nullable にする(ミキサー機器が DeviceFinder に見えないときは `null`)。
 - NXS2 は 30 ms 位置パケットを出さない。再生位置は beat-link の `TimeFinder` の補間値を使う。
-- NXS2 の dbserver は要求側 device 番号 1〜4 を要求する。既定では番号 5 以降で参加し、メタデータは NFS(Crate Digger)経由のみとする(`MetadataFinder.setPassive(true)`)。CD・未解析曲のタイトルは v1 では取れない。
-- Pi: 64bit Raspberry Pi OS、Docker Engine。eth0 を CDJ のスイッチに有線接続、API は同じ NIC か別 NIC どちらでもよいが、DJ Link セグメントに繋がる NIC は 1 枚だけにする。Pi 上で rekordbox を動かさない。
+- NXS2 の dbserver は要求側 device 番号 1〜4 を要求し、その番号はネットワーク上に実在する機器(Pi 自身でよい)でなければならない。CDJ が 2 台なので、Pi は既定で `VirtualCdj.setUseStandardPlayerNumber(true)` により 1〜4 の空き番号(最小の未使用番号)を名乗り、番号が 4 以下なら `MetadataFinder` を非 passive にして dbserver も使う。これで CD・未解析曲・rekordbox link 経由の曲のタイトルも取れる。USB 曲の経路(NFS)には影響しない。beat-link は番号の主張と防衛(claim / defend)を実装済みで、1〜4 が全て使用中なら警告して 5 以降に落ちる(その場合は自動で passive に切り替える)。環境変数で番号固定も可能。
+- Pi は DJM のチャンネル専用ポートではなく、スイッチ(または DJM の汎用ポート)に挿す。チャンネル専用ポートはミキサーが番号を割り当てるため(beat-link は対応しているが、意図しない番号になる)。
+- ネットワーク: DJ 機材は機材同士だけの閉じた有線ネットワーク。Pi は eth0 でそこに参加し、API は wlan0 で会場 Wi-Fi に公開する。DJ Link セグメントに繋がる NIC は eth0 の 1 枚だけ。eth0 の IP は DHCP を試み、取れなければ link-local(169.254/16)にフォールバックする OS 設定を deploy 手順に含める(CDJ は既定で auto-IP)。API は全インタフェースで listen し、利用者には wlan0 の固定 IP か mDNS 名(`cdj-music-link.local`、avahi)で知らせる。
+- Pi: Raspberry Pi 4 または 5(4GB 以上)、64bit Raspberry Pi OS、Docker Engine。会場でもインターネットに出られるので、イメージは GHCR から pull する。Pi 上で rekordbox を動かさない。
+- 実機(NXS2)はイベント前に事前検証できる。模擬環境は拍・ステータス・接続/切断までとし、メタデータ経路と on-air は事前検証で詰める。
 - JVM を書くのは Kotlin の 1 サービスだけ。Clojure も BLT も使わない。
 - ライセンス: beat-link は EPL-2.0。このリポジトリは MIT(私の判断。変更可)。
 
@@ -62,7 +67,7 @@ Gradle マルチプロジェクト(Kotlin DSL)、JDK 21、Kotlin 2.x。HTTP は 
 
 ### 4.1 server(= [A])
 
-起動順: `DeviceFinder` → `VirtualCdj`(番号は既定で自動 5〜15。環境変数で 1〜4 を指定した場合のみ passive を外す)→ `BeatFinder` → `MetadataFinder(passive)` → `ArtFinder` → `BeatGridFinder` → `WaveformFinder(style=RGB, findDetails=true)` → `TimeFinder`。
+起動順: `DeviceFinder` → `VirtualCdj`(既定 `setUseStandardPlayerNumber(true)`。`DEVICE_NUMBER` 指定時はその番号)→ `BeatFinder` → `MetadataFinder`(取得した番号が 4 以下なら `setPassive(false)`、5 以上なら `setPassive(true)`)→ `ArtFinder` → `BeatGridFinder` → `WaveformFinder(style=RGB, findDetails=true)` → `TimeFinder`。`VirtualCdj.setSendingStatus` は呼ばない。
 
 `VirtualCdj.start()` は DJ Link 機器を最大 100 秒待ってから失敗する。server は失敗したら数秒待って再試行するループに入り、起動中も HTTP は応答する(`/v1/health` が `online: false` を返す)。機器が全部消えたら(`DeviceAnnouncementListener` の `deviceLost` で `getCurrentDevices()` が空)`VirtualCdj.stop()` して同じループに戻る。これは Beat Link Trigger の `triggers.clj` の device-listener と同じ作法。
 
@@ -98,7 +103,7 @@ JSON の形は Beat Link Trigger `overlay.clj` の `describe-device` / `describe
   "updatedAt": 1761300000000,
   "playState": "playing",            // playing | paused | cued | searching | loading | ended | empty
   "isPlaying": true, "isPaused": false, "isCued": false, "isLooping": false,
-  "isOnAir": true, "isSynced": false, "isTempoMaster": true,
+  "isOnAir": true, "isSynced": false, "isTempoMaster": true,   // isOnAir はミキサー不在なら null
   "trackBpm": 128.0, "pitch": 1.25, "tempo": 129.6,
   "beatNumber": 412, "beatWithinBar": 1,
   "position": { "ms": 193125, "remainingMs": 171003, "updatedAt": 1761300000000, "definitive": true },
@@ -115,7 +120,7 @@ JSON の形は Beat Link Trigger `overlay.clj` の `describe-device` / `describe
 
 `track` はロード直後は `id`・`sourcePlayer`・`slot`・`type` だけが入り、タイトル等は NFS 取得後に埋まる。利用者はフィールドの有無で判断できる。未ロードなら `track: null`。
 
-**now-playing の判定(私の判断、変更可)**: テンポマスターが再生中ならそれ。いなければ on-air かつ再生中のプレイヤーのうち番号が小さいもの。いなければ再生中のプレイヤー。いなければ `null`。
+**now-playing の判定(私の判断、変更可)**: `isOnAir` が取れる環境なら、on-air かつ再生中のプレイヤーのうちテンポマスターを優先、なければ番号が小さいもの。`isOnAir` が `null` の環境なら、再生中のテンポマスター、なければ再生中のプレイヤーのうち番号が小さいもの。どちらでも該当なしなら `null`。
 
 ### 4.3 SSE `/v1/stream`
 
@@ -147,7 +152,9 @@ beat-link の `VirtualCdj` は「他の DJ Link 機器が見えるまで start �
 ### 4.5 Docker
 
 - `server/Dockerfile`: multi-stage(gradle build → `eclipse-temurin:21-jre`)。`linux/arm64` と `linux/amd64`。
-- `deploy/compose.yaml`(Pi): `server` を `network_mode: host`、`restart: unless-stopped`、環境変数で `PORT`(既定 17080)、`DEVICE_NAME`、`DEVICE_NUMBER`(省略で自動)、`LOG_LEVEL`。
+- `deploy/compose.yaml`(Pi): `server` を `network_mode: host`、`restart: unless-stopped`、イメージは `ghcr.io/<owner>/cdj-music-link-server`。環境変数で `PORT`(既定 17080)、`DEVICE_NAME`、`DEVICE_NUMBER`(省略で 1〜4 の空き番号を自動)、`LOG_LEVEL`。
+- CI: GitHub Actions で `linux/arm64` と `linux/amd64` のイメージを GHCR に push。ユニットテストと契約テストも CI で回す。compose.emu の統合テストは CI の Linux ランナーで実行する(bridge の broadcast は Linux なら通る)。
+- `deploy/pi-setup.md`: eth0 の DHCP → link-local フォールバック設定、avahi、Docker Engine 導入、compose の起動手順。
 - `deploy/compose.emu.yaml`: user-defined bridge `djlink`。`fake-cdj-1`(番号 1、128 BPM、自動再生)、`fake-cdj-2`(番号 2、停止)、`server`(ポートを host に publish)。
 - Docker Desktop(macOS)で bridge 内のコンテナ間 UDP broadcast が通ることを、実装の最初に `socat` で確認する。通らなければ Linux VM か Pi 実機で模擬を回す。
 
@@ -160,7 +167,7 @@ beat-link の `VirtualCdj` は「他の DJ Link 機器が見えるまで start �
 - ユニット: fake-cdj のパケットを beat-link クラスでパース。JSON 整形は beat-link の生データクラス(`BeatGrid`、`WaveformPreview`、`WaveformDetail` はバイト列から構築可)に BLT 同梱 `resources/beat_link_trigger/sampleTracks` のバイナリを食わせて検証。`TrackMetadata` はバイト列から作れないので、`TrackInfo` DTO への変換は実機検証に回し、DTO 以降を単体で検証する。
 - 契約: OpenAPI に対するレスポンス検証。
 - 統合(compose.emu): server が 2 台を認識し、`/v1/players` に 2 件、1 番が `playing` で `tempo ≈ 128`、SSE の `beat` が約 468 ms 間隔で届く、`fake-cdj-2` に `POST /play` すると `player` イベントが出る、`fake-cdj` を両方止めると `online: false` になり、戻すと復帰する。
-- 実機: `docs/hardware-checklist.md`。tcpdump で 50000〜50002、`/v1/health` の `online`、曲ロードから `track.title` が埋まるまでの秒数、2 台同時再生、rekordbox link の出入り。
+- 実機: `docs/hardware-checklist.md`。tcpdump で 50000〜50002、`/v1/health` の `online` と取得した番号、曲ロードから `track.title` が埋まるまでの秒数(USB 曲は NFS 経路、CD/未解析曲は dbserver 経路)、2 台同時再生、ミキサー接続時の `isOnAir`、CDJ の電源断と復帰。
 
 ## 6. ビルダーに任せる点
 
@@ -174,7 +181,10 @@ beat-link の `VirtualCdj` は「他の DJ Link 機器が見えるまで start �
 
 - リポジトリは MIT。
 - 既定ポート 17080(BLT の 17081 と被らない)。
-- `MetadataFinder` は既定で passive。番号 1〜4 を明示したときだけ dbserver を使う。
+- 既定で 1〜4 の空き番号を名乗り、4 以下なら dbserver も使う(非 passive)。5 以降に落ちたときだけ passive。
+- `isOnAir` はミキサー不在で `null`。
+- Pi はスイッチに挿す(DJM のチャンネルポートに挿さない)。
+- 配布は GHCR、CI は GitHub Actions。
 - now-playing の判定規則。
 - SSE で位置の定期配信をしない。
 - 波形は数値配列で返し、PNG は出さない。
