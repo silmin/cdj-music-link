@@ -6,13 +6,13 @@
 
 **Architecture:** `server` モジュールが beat-link の Finder 群をリスナーで購読して `PlayerState` に畳み込み、Ktor で `/v1/*` と SSE を出す。`fake-cdj` モジュールは beat-link に依存せず、解析ドキュメントの配置でキープアライブ・ステータス・ビートのパケットを手組みして送る。`openapi/openapi.yaml` が API の正で、契約テストがレスポンスを検証する。
 
-**Tech Stack:** Kotlin 2.2、JDK 21、Gradle(Kotlin DSL、wrapper)、Ktor 3.5(cio / sse / cors / content-negotiation / test-host)、kotlinx.serialization 1.9、kotlinx.coroutines、beat-link 8.0.0、slf4j-simple 2.0、JUnit 5、swagger-request-validator-core 2.44、swagger-ui webjar 5.x、Docker / Compose、GitHub Actions。
+**Tech Stack:** Eclipse Temurin 25(LTS)、Kotlin 2.4.21、Gradle 9.7.1(wrapper、Kotlin DSL、バージョンカタログ)、Ktor 3.6.0(cio / sse / cors / content-negotiation / test-host)、kotlinx.serialization 1.12.0、kotlinx.coroutines 1.11.0、beat-link 8.0.0、slf4j-simple 2.0.20、JUnit 6.1.3(Jupiter)、swagger-request-validator-core 3.0.0(JDK 25 で動かなければ 2.44.x)、swagger-ui webjar 5.34.0、Docker / Compose、GitHub Actions。
 
 **Spec:** `docs/superpowers/specs/2026-10-24-cdj-music-link-design.md`
 
 ## Global Constraints
 
-- ランタイムは JDK 21。beat-link 8.0.0 は Java 11 クラスファイル。
+- ランタイムとツールチェーンは JDK 25(Temurin)。`kotlin { jvmToolchain(25) }`。beat-link 8.0.0 は Java 11 クラスファイルなので問題ない。Gradle は wrapper 9.7.1 に固定(Kotlin 2.4.21 の対応上限が Gradle 9.7)。
 - `VirtualCdj.setSendingStatus` は呼ばない(CDJ を操作しない)。
 - 既定で `VirtualCdj.setUseStandardPlayerNumber(true)`。取得した番号が 4 以下なら `MetadataFinder.setPassive(false)`、5 以上なら `setPassive(true)`。
 - 公開 API のベースパスは `/v1`、CORS は `*`、認証なし、時刻は epoch ミリ秒。既定ポート 17080。
@@ -90,11 +90,11 @@ cdj-music-link/
 **Interfaces:**
 - Produces: Gradle モジュール `:server`, `:fake-cdj`。バージョンカタログの alias(`libs.ktor.server.cio` など)。
 
-判断(実装者が従う): この Mac の JDK は壊れた x86 の 14 なので、`brew install --cask temurin@21` を入れる。Gradle は wrapper 8.x。バージョンカタログの値は実装時点の最新パッチ(Kotlin 2.2.x、Ktor 3.5.x、kotlinx.serialization 1.9.x、coroutines 1.10.x、JUnit 5.13.x、slf4j-simple 2.0.x、beat-link 8.0.0 固定)。ルートパッケージは `cdjmusiclink`。
+判断(実装者が従う): この Mac の既存 JDK は全部 x86_64 なので撤去済み(別途実施)。`brew install --cask temurin@25` と `brew install gradle`(wrapper 生成用)を前提にする。`gradle wrapper --gradle-version 9.7.1` で wrapper を作り、以後は `./gradlew` のみ使う。バージョンカタログは Tech Stack の値を固定で書く。ルートパッケージは `cdjmusiclink`。
 
-- [ ] **Step 1: JDK 21 を入れて確認** — Run: `brew install --cask temurin@21 && /usr/libexec/java_home -v 21` Expected: パスが出る
-- [ ] **Step 2: Gradle 骨組みを書く**(`settings.gradle.kts` に `include("server", "fake-cdj")`、`libs.versions.toml`、両モジュールに `kotlin("jvm")`、`kotlin("plugin.serialization")`、`application`、JUnit 5 と `useJUnitPlatform()`。`:server` に ktor / serialization / coroutines / beat-link / slf4j-simple / swagger-request-validator-core / swagger-ui webjar / ktor-server-test-host。`:fake-cdj` の main 依存は coroutines と serialization のみ、test 依存に beat-link)
-- [ ] **Step 3: `SmokeTest.kt` に `@Test fun jvmIs21() { assertEquals("21", System.getProperty("java.specification.version")) }`**
+- [ ] **Step 1: JDK 25 と Gradle を確認** — Run: `/usr/libexec/java_home -v 25 && java -version && gradle --version | head -3` Expected: Temurin 25 のパス、`openjdk version "25`、Gradle 9.8 以上(wrapper 生成にだけ使う)
+- [ ] **Step 2: Gradle 骨組みを書く**(`gradle wrapper --gradle-version 9.7.1` → `settings.gradle.kts` に `include("server", "fake-cdj")`、`libs.versions.toml`、両モジュールに `kotlin("jvm")`、`kotlin("plugin.serialization")`、`application`、`kotlin { jvmToolchain(25) }`、JUnit 6(Jupiter)と `useJUnitPlatform()`。`:server` に ktor / serialization / coroutines / beat-link / slf4j-simple / swagger-request-validator-core / swagger-ui webjar / ktor-server-test-host。`:fake-cdj` の main 依存は coroutines と serialization のみ、test 依存に beat-link)
+- [ ] **Step 3: `SmokeTest.kt` に `@Test fun jvmIs25() { assertEquals("25", System.getProperty("java.specification.version")) }`**
 - [ ] **Step 4: Run** `./gradlew test` Expected: BUILD SUCCESSFUL、SmokeTest PASS
 - [ ] **Step 5: Commit** `chore: gradle scaffold for server and fake-cdj`
 
@@ -329,7 +329,7 @@ cdj-music-link/
 - Consumes: Task 5〜9 の成果物
 - Produces: `docker compose -f deploy/compose.emu.yaml up` で `fake-cdj-1`(番号 1、128 BPM、autoplay、trackId 101)、`fake-cdj-2`(番号 2、停止、trackId 202)、`server`(host に 17080 を publish、`fake-cdj-*` の制御ポートも 17091/17092 に publish)が bridge `djlink` で動く。
 
-判断: Dockerfile は multi-stage(`gradle:8-jdk21` でビルド → `eclipse-temurin:21-jre`)。`server` は `JAVA_TOOL_OPTIONS=-Xmx512m`。`fake-cdj` は `cap_add` 不要(50000〜50002 は非特権ポート)。
+判断: Dockerfile は multi-stage(`gradle:9.7.1-jdk25` でビルド → `eclipse-temurin:25-jre`。どちらも arm64 あり)。`server` は `JAVA_TOOL_OPTIONS=-Xmx512m`。`fake-cdj` は `cap_add` 不要(50000〜50002 は非特権ポート)。
 
 - [ ] **Step 1: Docker Desktop を起動し、bridge の broadcast を確認** — Run: `docker network create bctest && docker run -d --rm --name rx --network bctest alpine/socat -u UDP-RECV:50000 STDOUT && sleep 1 && docker run --rm --network bctest alpine/socat -u STDIN UDP-DATAGRAM:255.255.255.255:50000,broadcast <<< hello && sleep 1 && docker logs rx; docker rm -f rx; docker network rm bctest` Expected: `hello` が rx のログに出る。出なければ、以降の統合テストは Linux(Pi か CI)で回すと README に書き、このタスクはビルドまでで止める。
 - [ ] **Step 2: Dockerfile 2 本と `compose.emu.yaml` を書く**
