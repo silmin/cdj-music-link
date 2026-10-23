@@ -1,0 +1,47 @@
+name: cdj-music-link-emu
+
+networks:
+  djlink:
+    driver: bridge
+
+services:
+  fake-cdj-1:
+    build:
+      context: ..
+      dockerfile: fake-cdj/Dockerfile
+    image: cdj-music-link-fake-cdj:dev
+    networks: [djlink]
+    environment:
+      FAKE_NUMBER: "1"
+      FAKE_BPM: "128"
+      FAKE_AUTOPLAY: "true"
+      FAKE_TRACK_ID: "101"
+    ports:
+      - "17091:17090"
+
+  fake-cdj-2:
+    build:
+      context: ..
+      dockerfile: fake-cdj/Dockerfile
+    image: cdj-music-link-fake-cdj:dev
+    networks: [djlink]
+    environment:
+      FAKE_NUMBER: "2"
+      FAKE_AUTOPLAY: "false"
+      FAKE_TRACK_ID: "202"
+    ports:
+      - "17092:17090"
+
+  server:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: cdj-music-link-server:dev
+    networks: [djlink]
+    environment:
+      LOG_LEVEL: info
+    ports:
+      - "17080:17080"
+    depends_on:
+      - fake-cdj-1
+      - fake-cdj-2
