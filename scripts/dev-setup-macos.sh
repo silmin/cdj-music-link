@@ -8,11 +8,11 @@ set -euo pipefail
 
 echo "== 1. x86_64 JDK の撤去"
 for jdk in /Library/Java/JavaVirtualMachines/*; do
-  [ -e "$jdk" ] || continue
-  bin="$jdk/Contents/Home/bin/java"
   if [ -L "$jdk" ] && [ ! -e "$jdk" ]; then
     echo "  dangling symlink: $jdk"; sudo rm -f "$jdk"; continue
   fi
+  [ -e "$jdk" ] || continue
+  bin="$jdk/Contents/Home/bin/java"
   if [ -x "$bin" ] && file -b "$bin" | grep -q x86_64 && ! file -b "$bin" | grep -q arm64; then
     echo "  x86_64 only: $jdk"; sudo rm -rf "$jdk"
   else
