@@ -3,3 +3,7 @@ Third-party notices
 This project uses beat-link (https://github.com/Deep-Symmetry/beat-link) as a
 dependency. beat-link is copyright Deep Symmetry, LLC and is licensed under the
 Eclipse Public License 2.0.
+
+Sample track data (server/src/test/resources/fixtures/sample1) from Beat Link Trigger
+(https://github.com/Deep-Symmetry/beat-link-trigger), copyright Deep Symmetry, LLC,
+licensed under the Eclipse Public License 2.0.
