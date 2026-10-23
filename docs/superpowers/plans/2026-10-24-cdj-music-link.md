@@ -96,7 +96,8 @@ cdj-music-link/
 - [ ] **Step 2: Gradle 骨組みを書く**(`gradle wrapper --gradle-version 9.7.1` → `settings.gradle.kts` に `include("server", "fake-cdj")`、`libs.versions.toml`、両モジュールに `kotlin("jvm")`、`kotlin("plugin.serialization")`、`application`、`kotlin { jvmToolchain(25) }`、JUnit 6(Jupiter)と `useJUnitPlatform()`。`:server` に ktor / serialization / coroutines / beat-link / slf4j-simple / swagger-request-validator-core / swagger-ui webjar / ktor-server-test-host。`:fake-cdj` の main 依存は coroutines と serialization のみ、test 依存に beat-link)
 - [ ] **Step 3: `SmokeTest.kt` に `@Test fun jvmIs25() { assertEquals("25", System.getProperty("java.specification.version")) }`**
 - [ ] **Step 4: Run** `./gradlew test` Expected: BUILD SUCCESSFUL、SmokeTest PASS
-- [ ] **Step 5: Commit** `chore: gradle scaffold for server and fake-cdj`
+- [ ] **Step 5: Homebrew の gradle を外す** — wrapper ができたので `brew uninstall gradle && brew autoremove`(gradle が依存で入れた openjdk 27 も消える)。Run: `./gradlew --version | grep -E 'Gradle|JVM'` Expected: Gradle 9.7.1、JVM 25
+- [ ] **Step 6: Commit** `chore: gradle scaffold for server and fake-cdj`
 
 ---
 
