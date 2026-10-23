@@ -1,3 +1,8 @@
+/*
+ * This file is distributed under the Eclipse Public License 2.0 (see THIRD_PARTY_LICENSES/EPL-2.0.txt),
+ * not the MIT License that covers the rest of cdj-music-link, because the packet byte templates below are
+ * reproduced from beat-link's VirtualCdj.java, copyright Deep Symmetry, LLC. See NOTICE.
+ */
 package cdjmusiclink.fakecdj
 
 /**

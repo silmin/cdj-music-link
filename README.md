@@ -94,4 +94,9 @@ scripts/dev-setup-macos.sh   # macOS での開発セットアップ
 
 ## ライセンス
 
-MIT(`LICENSE`)。beat-link は EPL-2.0(`NOTICE` 参照)。
+MIT(`LICENSE`)。ただし次の 2 つは Eclipse Public License 2.0(本文は `THIRD_PARTY_LICENSES/EPL-2.0.txt`)。
+
+- `fake-cdj/src/main/kotlin/cdjmusiclink/fakecdj/Packets.kt`: パケットのバイト列テンプレートを beat-link の VirtualCdj から写しているため、このファイル全体を EPL-2.0 で配布する
+- `server/src/test/resources/fixtures/sample1/`: Beat Link Trigger 同梱のサンプル曲データ(テスト専用)
+
+依存ライブラリ(beat-link / crate-digger / electro は EPL-2.0、Ktor / kotlinx / sqlite-jdbc / swagger-ui は Apache-2.0、slf4j / kaitai は MIT)の一覧は `NOTICE` にある。

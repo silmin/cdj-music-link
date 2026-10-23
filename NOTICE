@@ -1,13 +1,32 @@
-Third-party notices
+Third-party notices for cdj-music-link
 
-This project uses beat-link (https://github.com/Deep-Symmetry/beat-link) as a
-dependency. beat-link is copyright Deep Symmetry, LLC and is licensed under the
-Eclipse Public License 2.0.
+cdj-music-link itself is licensed under the MIT License (see LICENSE), with the
+exceptions listed below. Where a file or directory is covered by the Eclipse
+Public License 2.0, the license text is in THIRD_PARTY_LICENSES/EPL-2.0.txt.
 
-Sample track data (server/src/test/resources/fixtures/sample1) from Beat Link Trigger
-(https://github.com/Deep-Symmetry/beat-link-trigger), copyright Deep Symmetry, LLC,
-licensed under the Eclipse Public License 2.0.
+1. fake-cdj/src/main/kotlin/cdjmusiclink/fakecdj/Packets.kt
+   The keep-alive, status and beat packet byte templates in this file are
+   reproduced from beat-link's VirtualCdj.java (https://github.com/Deep-Symmetry/beat-link),
+   copyright Deep Symmetry, LLC. Because it contains that material, this file is
+   distributed under the Eclipse Public License 2.0, not the MIT License.
 
-The keep-alive, status and beat packet templates in fake-cdj/src/main/kotlin/cdjmusiclink/fakecdj/Packets.kt
-are derived from beat-link's VirtualCdj (https://github.com/Deep-Symmetry/beat-link), copyright
-Deep Symmetry, LLC, licensed under the Eclipse Public License 2.0.
+2. server/src/test/resources/fixtures/sample1/
+   Sample track data (waveform, beat grid, artwork) copied from Beat Link Trigger
+   (https://github.com/Deep-Symmetry/beat-link-trigger), copyright Deep Symmetry, LLC,
+   licensed under the Eclipse Public License 2.0. Used only by tests.
+
+Runtime dependencies (also shipped inside the Docker images):
+
+  beat-link 8.0.0           Deep Symmetry, LLC   EPL-2.0   https://github.com/Deep-Symmetry/beat-link
+  crate-digger 0.2.1        Deep Symmetry, LLC   EPL-2.0   https://github.com/Deep-Symmetry/crate-digger
+  electro 0.1.4             Deep Symmetry, LLC   EPL-2.0   https://github.com/Deep-Symmetry/electro
+  kaitai-struct-runtime     Kaitai Project       MIT
+  sqlite-jdbc (willena)     Apache-2.0
+  Ktor 3.6.0                JetBrains            Apache-2.0
+  kotlinx.coroutines        JetBrains            Apache-2.0
+  kotlinx.serialization     JetBrains            Apache-2.0
+  slf4j 2.0.20              QOS.ch               MIT
+  swagger-ui 5.34.0 (webjar, served at /docs)    Apache-2.0
+
+The Pro DJ Link protocol knowledge behind this project comes from Deep Symmetry's
+public analysis (https://djl-analysis.deepsymmetry.org/); no code was copied from it.
