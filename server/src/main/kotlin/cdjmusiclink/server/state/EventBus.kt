@@ -6,7 +6,11 @@ import cdjmusiclink.server.model.Track
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.Transient
 import java.util.concurrent.atomic.AtomicLong
 
@@ -41,8 +45,17 @@ data class BeatEvent(
     override fun withId(id: Long): Event = copy(id = id)
 }
 
-@Serializable
-data class PlayerEvent(val player: Player, @Transient override val id: Long = 0) : Event {
+/** SsePlayer は Player そのもの(allOf)なので、ラッパーを付けずフラットに直列化する。 */
+object PlayerEventSerializer : KSerializer<PlayerEvent> {
+    override val descriptor: SerialDescriptor = Player.serializer().descriptor
+    override fun serialize(encoder: Encoder, value: PlayerEvent) =
+        encoder.encodeSerializableValue(Player.serializer(), value.player)
+    override fun deserialize(decoder: Decoder): PlayerEvent =
+        PlayerEvent(decoder.decodeSerializableValue(Player.serializer()))
+}
+
+@Serializable(with = PlayerEventSerializer::class)
+data class PlayerEvent(val player: Player, override val id: Long = 0) : Event {
     override val name: String get() = "player"
     override fun withId(id: Long): Event = copy(id = id)
 }

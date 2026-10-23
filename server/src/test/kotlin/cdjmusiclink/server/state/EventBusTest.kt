@@ -8,6 +8,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import cdjmusiclink.server.model.ApiJson
+import cdjmusiclink.server.model.Player
+import kotlinx.serialization.json.jsonObject
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -54,5 +57,18 @@ class EventBusTest {
                 """"isTempoMaster":true,"position":{"ms":1000},"waveform":{"height":5,"color":"#336699"},"receivedAt":99}""",
             ApiJson.json.encodeToString(BeatEvent.serializer(), e),
         )
+    }
+
+    @Test
+    fun playerEventSerializesAsFlatPlayer() {
+        val st = PlayerState(1, "CDJ-3000", "10.0.0.1")
+        st.applyStatus(snap(), true, 10)
+        val p = st.toDto()
+        val json = ApiJson.json.encodeToString(PlayerEvent.serializer(), PlayerEvent(p).withId(9) as PlayerEvent)
+        assertEquals(ApiJson.json.encodeToString(Player.serializer(), p), json)
+        val obj = ApiJson.json.parseToJsonElement(json).jsonObject
+        assertFalse("player" in obj)
+        assertFalse("id" in obj)
+        assertEquals(PlayerEvent(p), ApiJson.json.decodeFromString(PlayerEvent.serializer(), json))
     }
 }
