@@ -17,11 +17,11 @@ private val DOCS_HTML = """
 <head>
   <meta charset="utf-8">
   <title>cdj-music-link API</title>
-  <link rel="stylesheet" href="./webjars/swagger-ui.css">
+  <link rel="stylesheet" href="/docs/webjars/swagger-ui.css">
 </head>
 <body>
   <div id="swagger-ui"></div>
-  <script src="./webjars/swagger-ui-bundle.js"></script>
+  <script src="/docs/webjars/swagger-ui-bundle.js"></script>
   <script>
     window.ui = SwaggerUIBundle({ url: "/openapi.yaml", dom_id: "#swagger-ui" });
   </script>

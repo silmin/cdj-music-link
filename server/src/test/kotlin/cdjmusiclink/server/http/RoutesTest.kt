@@ -102,4 +102,25 @@ class RoutesTest {
         assertEquals(HttpStatusCode.OK, client.get("/docs/webjars/swagger-ui.css").status)
         assertFalse(client.get("/nope").status.isSuccess())
     }
+
+    @Test
+    fun docsAssetsResolve() = app {
+        val html = client.get("/docs").bodyAsText()
+        // ブラウザと同じく /docs を基準に解決する
+        val refs = Regex("""(?:href|src)="([^"]+)"""").findAll(html).map { it.groupValues[1] }.toList()
+        assertEquals(2, refs.size, "refs: $refs")
+        for (ref in refs) {
+            val path = java.net.URI("http://localhost/docs").resolve(ref).path
+            val res = client.get(path)
+            assertEquals(HttpStatusCode.OK, res.status, "$ref -> $path")
+            val type = res.headers[HttpHeaders.ContentType]!!
+            when {
+                path.endsWith(".css") -> assertTrue(type.startsWith("text/css"), "$path: $type")
+                path.endsWith(".js") -> assertTrue(
+                    type.startsWith("application/javascript") || type.startsWith("text/javascript"), "$path: $type",
+                )
+                else -> error("unexpected asset $path")
+            }
+        }
+    }
 }
