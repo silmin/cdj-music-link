@@ -1,0 +1,722 @@
+openapi: 3.0.3
+info:
+  title: cdj-music-link API
+  version: "1.0.0"
+  description: |
+    Pioneer CDJ のプレイヤー状態を読み取り専用で公開する HTTP/SSE API。
+    ベースパスは `/v1`。JSON は UTF-8、CORS は `*`、認証なし。
+    時刻はすべて epoch ミリ秒(サーバーの時計)。
+servers:
+  - url: http://localhost:17080
+    description: デフォルトポート 17080
+security: []
+tags:
+  - name: system
+    description: 状態確認と機器
+  - name: players
+    description: プレイヤー状態と曲情報
+  - name: stream
+    description: Server-Sent Events
+x-sse-events:
+  snapshot: SseSnapshot
+  beat: SseBeat
+  player: SsePlayer
+  track: SseTrack
+  device: SseDevice
+  master: SseMaster
+  online: SseOnline
+paths:
+  /v1/health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: ヘルスチェック
+      responses:
+        "200":
+          description: サーバーと DJ Link の状態
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /v1/devices:
+    get:
+      tags: [system]
+      operationId: listDevices
+      summary: DJ Link 上の全機器
+      description: CDJ、ミキサー、rekordbox を含む。
+      responses:
+        "200":
+          description: 機器一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+  /v1/players:
+    get:
+      tags: [players]
+      operationId: listPlayers
+      summary: プレイヤー一覧
+      description: "`kind = player` の機器のみ。各要素は `/v1/players/{n}` と同じ。"
+      responses:
+        "200":
+          description: プレイヤー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Player"
+  /v1/players/{n}:
+    get:
+      tags: [players]
+      operationId: getPlayer
+      summary: プレイヤー 1 台の状態
+      parameters:
+        - $ref: "#/components/parameters/PlayerNumber"
+      responses:
+        "200":
+          description: プレイヤー状態
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/players/{n}/track:
+    get:
+      tags: [players]
+      operationId: getPlayerTrack
+      summary: Player の track 部分
+      description: 曲がロードされていなければ 404。
+      parameters:
+        - $ref: "#/components/parameters/PlayerNumber"
+      responses:
+        "200":
+          description: 曲情報
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Track"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/players/{n}/artwork:
+    get:
+      tags: [players]
+      operationId: getPlayerArtwork
+      summary: ジャケット画像
+      description: "`Content-Type` は実データから判定する。なければ 404。"
+      parameters:
+        - $ref: "#/components/parameters/PlayerNumber"
+      responses:
+        "200":
+          description: 画像のバイト列
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/players/{n}/waveform/preview:
+    get:
+      tags: [players]
+      operationId: getPlayerWaveformPreview
+      summary: プレビュー波形
+      parameters:
+        - $ref: "#/components/parameters/PlayerNumber"
+      responses:
+        "200":
+          description: プレビュー波形
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaveformPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/players/{n}/waveform/detail:
+    get:
+      tags: [players]
+      operationId: getPlayerWaveformDetail
+      summary: 詳細波形
+      description: |
+        範囲省略時は全体。`fromMs` または `toMs` が数値でない、負数、
+        もしくは `fromMs > toMs` の場合は 400。
+      parameters:
+        - $ref: "#/components/parameters/PlayerNumber"
+        - name: fromMs
+          in: query
+          required: false
+          description: 開始位置(ミリ秒)
+          schema:
+            type: integer
+            minimum: 0
+        - name: toMs
+          in: query
+          required: false
+          description: 終了位置(ミリ秒)
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: 詳細波形
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaveformDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/players/{n}/beatgrid:
+    get:
+      tags: [players]
+      operationId: getPlayerBeatgrid
+      summary: ビートグリッド
+      parameters:
+        - $ref: "#/components/parameters/PlayerNumber"
+      responses:
+        "200":
+          description: ビートグリッド
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BeatGrid"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/master:
+    get:
+      tags: [players]
+      operationId: getMaster
+      summary: テンポマスター
+      description: いなければ `player` が null。
+      responses:
+        "200":
+          description: テンポマスター
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MasterInfo"
+  /v1/now-playing:
+    get:
+      tags: [players]
+      operationId: getNowPlaying
+      summary: 今かかっている曲
+      description: |
+        Player 1 件か `null`。
+        `isOnAir` が取れる環境では、on-air かつ再生中のプレイヤーのうちテンポマスターを優先し、
+        なければ番号が小さいもの。`isOnAir` が null の環境では、再生中のテンポマスター、
+        なければ再生中のプレイヤーのうち番号が小さいもの。該当なしなら `null`。
+      responses:
+        "200":
+          description: Player または null
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: "#/components/schemas/Player"
+                nullable: true
+  /v1/stream:
+    get:
+      tags: [stream]
+      operationId: streamEvents
+      summary: SSE ストリーム
+      description: |
+        `text/event-stream` を返す。接続直後の最初のイベントは必ず `snapshot`。
+        各イベントの `id:` は単調増加する整数、`retry:` は 2000(ミリ秒)。
+        位置の定期送信はしない(GET で取得する)。
+        event 名とデータのスキーマの対応はトップレベルの `x-sse-events` を参照。
+      responses:
+        "200":
+          description: SSE。event は snapshot, beat, player, track, device, master, online。
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /docs:
+    get:
+      tags: [system]
+      operationId: getDocs
+      summary: Swagger UI
+      responses:
+        "200":
+          description: Swagger UI の HTML
+          content:
+            text/html:
+              schema:
+                type: string
+  /openapi.yaml:
+    get:
+      tags: [system]
+      operationId: getOpenApiSpec
+      summary: この仕様
+      responses:
+        "200":
+          description: OpenAPI 仕様
+          content:
+            application/yaml:
+              schema:
+                type: string
+components:
+  parameters:
+    PlayerNumber:
+      name: n
+      in: path
+      required: true
+      description: プレイヤー番号
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    BadRequest:
+      description: パラメータ不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: 対象なし
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    Health:
+      type: object
+      required: [online, deviceNumber, deviceCount, serverTime, version]
+      properties:
+        online:
+          type: boolean
+          description: DJ Link ネットワークに参加しているか
+        deviceNumber:
+          type: integer
+          nullable: true
+          description: このサーバーの仮想デバイス番号
+        deviceCount:
+          type: integer
+        serverTime:
+          type: integer
+          format: int64
+          description: epoch ミリ秒
+        version:
+          type: string
+    Device:
+      type: object
+      required: [number, name, address, kind]
+      properties:
+        number:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        kind:
+          type: string
+          enum: [player, mixer, collection]
+    Color:
+      type: object
+      required: [name, hex]
+      properties:
+        name:
+          type: string
+          example: Pink
+        hex:
+          type: string
+          example: "#ff5aa8"
+    Position:
+      type: object
+      required: [ms, remainingMs, updatedAt, definitive]
+      properties:
+        ms:
+          type: integer
+          format: int64
+          description: 再生位置(ミリ秒)
+        remainingMs:
+          type: integer
+          format: int64
+          nullable: true
+          description: 残り時間(ミリ秒)
+        updatedAt:
+          type: integer
+          format: int64
+          description: epoch ミリ秒
+        definitive:
+          type: boolean
+          description: 位置が確定値か
+    Track:
+      type: object
+      description: |
+        ロード直後は `id`、`sourcePlayer`、`slot`、`type` のみが入り、
+        タイトル等は NFS 取得後に埋まる。
+      required:
+        - id
+        - sourcePlayer
+        - slot
+        - type
+        - artworkAvailable
+        - waveformAvailable
+        - beatgridAvailable
+      properties:
+        id:
+          type: integer
+        sourcePlayer:
+          type: integer
+        slot:
+          type: string
+          enum: [usb, sd, cd, collection, none]
+        type:
+          type: string
+          enum: [rekordbox, unanalyzed, cd, none]
+        title:
+          type: string
+          nullable: true
+        artist:
+          type: string
+          nullable: true
+        album:
+          type: string
+          nullable: true
+        key:
+          type: string
+          nullable: true
+          example: 8A
+        genre:
+          type: string
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        remixer:
+          type: string
+          nullable: true
+        originalArtist:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        durationSec:
+          type: integer
+          nullable: true
+        startingBpm:
+          type: number
+          nullable: true
+        rating:
+          type: integer
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        dateAdded:
+          type: string
+          nullable: true
+          example: "2021-05-01"
+        color:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/Color"
+          nullable: true
+        artworkAvailable:
+          type: boolean
+        waveformAvailable:
+          type: boolean
+        beatgridAvailable:
+          type: boolean
+    Player:
+      type: object
+      required:
+        - number
+        - name
+        - address
+        - updatedAt
+        - playState
+        - isPlaying
+        - isPaused
+        - isCued
+        - isLooping
+        - isOnAir
+        - isSynced
+        - isTempoMaster
+        - trackBpm
+        - pitch
+        - tempo
+        - beatNumber
+        - beatWithinBar
+        - position
+        - track
+      properties:
+        number:
+          type: integer
+        name:
+          type: string
+          example: CDJ-2000nexus
+        address:
+          type: string
+          example: 192.168.1.12
+        updatedAt:
+          type: integer
+          format: int64
+          description: epoch ミリ秒
+        playState:
+          type: string
+          enum: [playing, paused, cued, searching, loading, ended, empty]
+        isPlaying:
+          type: boolean
+        isPaused:
+          type: boolean
+        isCued:
+          type: boolean
+        isLooping:
+          type: boolean
+        isOnAir:
+          type: boolean
+          nullable: true
+          description: ミキサーが DJ Link 上にいなければ null
+        isSynced:
+          type: boolean
+        isTempoMaster:
+          type: boolean
+        trackBpm:
+          type: number
+          nullable: true
+          description: 曲未ロードなら null
+        pitch:
+          type: number
+          description: ピッチ(パーセント。例 1.25)
+        tempo:
+          type: number
+          nullable: true
+          description: 実効 BPM。曲未ロードなら null
+        beatNumber:
+          type: integer
+          nullable: true
+          description: 曲未ロードなら null
+        beatWithinBar:
+          type: integer
+          nullable: true
+          description: 小節内の拍(1〜4)。曲未ロードなら null
+        position:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/Position"
+          nullable: true
+        track:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/Track"
+          nullable: true
+          description: 未ロードなら null
+    MasterInfo:
+      type: object
+      required: [player, tempo]
+      properties:
+        player:
+          type: integer
+          nullable: true
+        tempo:
+          type: number
+          nullable: true
+    WaveformPreview:
+      type: object
+      required: [style, segments, maxHeight, heights, colors]
+      properties:
+        style:
+          type: string
+          enum: [blue, rgb, threeBand]
+        segments:
+          type: integer
+        maxHeight:
+          type: integer
+        heights:
+          type: array
+          items:
+            type: integer
+        colors:
+          type: array
+          items:
+            type: string
+            example: "#336699"
+    WaveformDetail:
+      type: object
+      required: [style, framesPerSecond, fromMs, toMs, heights, colors]
+      properties:
+        style:
+          type: string
+          enum: [blue, rgb, threeBand]
+        framesPerSecond:
+          type: integer
+          example: 150
+        fromMs:
+          type: integer
+          format: int64
+        toMs:
+          type: integer
+          format: int64
+        heights:
+          type: array
+          items:
+            type: integer
+        colors:
+          type: array
+          items:
+            type: string
+            example: "#336699"
+    BeatGrid:
+      type: object
+      required: [beats]
+      properties:
+        beats:
+          type: array
+          items:
+            type: object
+            required: [number, ms, beatWithinBar, bpm]
+            properties:
+              number:
+                type: integer
+              ms:
+                type: integer
+                format: int64
+              beatWithinBar:
+                type: integer
+              bpm:
+                type: number
+    SseSnapshot:
+      type: object
+      description: 接続直後に 1 回送る。
+      required: [players, master, devices, online, serverTime]
+      properties:
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        master:
+          $ref: "#/components/schemas/MasterInfo"
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Device"
+        online:
+          type: boolean
+        serverTime:
+          type: integer
+          format: int64
+    SseBeat:
+      type: object
+      description: 拍ごと。
+      required:
+        - player
+        - beatNumber
+        - beatWithinBar
+        - tempo
+        - nextBeatInMs
+        - nextBarInMs
+        - isTempoMaster
+        - position
+        - waveform
+        - receivedAt
+      properties:
+        player:
+          type: integer
+        beatNumber:
+          type: integer
+          nullable: true
+        beatWithinBar:
+          type: integer
+          nullable: true
+        tempo:
+          type: number
+          nullable: true
+        nextBeatInMs:
+          type: integer
+          nullable: true
+        nextBarInMs:
+          type: integer
+          nullable: true
+        isTempoMaster:
+          type: boolean
+        position:
+          type: object
+          nullable: true
+          required: [ms]
+          properties:
+            ms:
+              type: integer
+              format: int64
+        waveform:
+          type: object
+          nullable: true
+          description: プレビュー波形の現在位置の列。波形未取得なら null
+          required: [height, color]
+          properties:
+            height:
+              type: integer
+            color:
+              type: string
+              example: "#336699"
+        receivedAt:
+          type: integer
+          format: int64
+          description: epoch ミリ秒
+    SsePlayer:
+      description: Player 全体
+      allOf:
+        - $ref: "#/components/schemas/Player"
+    SseTrack:
+      type: object
+      required: [player, track]
+      properties:
+        player:
+          type: integer
+        track:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/Track"
+          nullable: true
+    SseDevice:
+      type: object
+      required: [action, device]
+      properties:
+        action:
+          type: string
+          enum: [connected, disconnected]
+        device:
+          $ref: "#/components/schemas/Device"
+    SseMaster:
+      type: object
+      required: [player, tempo]
+      properties:
+        player:
+          type: integer
+          nullable: true
+        tempo:
+          type: number
+          nullable: true
+    SseOnline:
+      type: object
+      required: [online]
+      properties:
+        online:
+          type: boolean
