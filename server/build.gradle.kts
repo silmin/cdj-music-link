@@ -25,6 +25,7 @@ dependencies {
     implementation(libs.swagger.ui)
 
     testImplementation(project(":fake-cdj"))
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
