@@ -100,12 +100,12 @@ object Packets {
             "020000000164",
     )
     private val STATUS_PAYLOAD = hex(
-        "01040000f800000100000301000000000100000001000000000000a000000000000000000000000000000000000000" +
-            "00000000000000000000000000000000000000000000000000000100040400000004000000040001000000000000" +
-            "312e343300000000000000000000ff0000100000800000007fffffff00100000000000000000000001ff0000000000" +
-            "0000000000000000000000010000000000000000000010000000100000000000000f0100001234567800000001010" +
-            "10101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
-            "00000000000000000000000015000007610000062f",
+        "01040000f800000100000301000000000100000001000000000000a00000000000000000000000000000000000000000" +
+        "000000000000000000000000000000000000000000000000000100040400000004000000040001000000000000312e34" +
+        "3300000000000000000000ff0000100000800000007fffffff00100000000000000000000001ff000000000000000000" +
+        "00000000000000010000000000000000000010000000100000000000000f010000123456780000000101010101000000" +
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+        "0000000015000007610000062f",
     )
     private val BEAT_PAYLOAD = hex(
         "01000d003c010101010202020210101010040404042020202008080808ffffffffffffffffffffffffffffffffffffff" +
@@ -134,15 +134,12 @@ object Packets {
         b[ST_NUMBER_A] = number
         b[ST_NUMBER_B] = number
         b[ST_PLAYING] = flag(p.playing)
-        if (p.trackLoaded) {
-            b[ST_SOURCE_PLAYER] = number
-            b[ST_SLOT] = p.slot.toByte()
-            b[ST_TRACK_TYPE] = p.trackType.toByte()
-            putInt(b, ST_TRACK_ID, p.trackId)
-            putShort(b, ST_BPM, p.bpmX100)
-        } else {
-            putShort(b, ST_BPM, NO_BPM)
-        }
+        val loaded = p.trackLoaded
+        b[ST_SOURCE_PLAYER] = if (loaded) number else 0
+        b[ST_SLOT] = if (loaded) p.slot.toByte() else 0
+        b[ST_TRACK_TYPE] = if (loaded) p.trackType.toByte() else 0
+        putInt(b, ST_TRACK_ID, if (loaded) p.trackId else 0)
+        putShort(b, ST_BPM, if (loaded) p.bpmX100 else NO_BPM)
         b[ST_P1] = (if (p.playing) 3 else 5).toByte()
         putInt(b, ST_SYNC_COUNTER, p.syncCounter)
         b[ST_FLAGS] = (
@@ -219,5 +216,10 @@ object Packets {
         dst[offset + 1] = v.toByte()
     }
 
-    private fun hex(s: String): ByteArray = ByteArray(s.length / 2) { s.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
+    private fun hex(s: String): ByteArray {
+        check(s.length % 2 == 0) { "odd number of hex digits" }
+        return decodeHex(s)
+    }
+
+    private fun decodeHex(s: String): ByteArray = ByteArray(s.length / 2) { s.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
 }

@@ -78,4 +78,23 @@ class PacketsTest {
         assertEquals(284, Packets.status(params()).size)
         assertEquals(96, Packets.beat("x", 1, 12800, 0x100000, 1, 468, 1404).size)
     }
+
+    @Test
+    fun unloadedStatusClearsTrackFields() {
+        val unloaded = params(playing = false, master = false, onAir = false, trackLoaded = false)
+        val s = CdjStatus(datagram(Packets.status(unloaded), 50002))
+        assertEquals(0, s.rekordboxId)
+        assertEquals(CdjStatus.TrackSourceSlot.NO_TRACK, s.trackSourceSlot)
+        assertEquals(CdjStatus.TrackType.NO_TRACK, s.trackType)
+        assertEquals(0xffff, s.bpm)
+    }
+
+    @Test
+    fun statusTemplateMatchesBeatLink() {
+        val b = Packets.status(params())
+        fun at(from: Int, to: Int) = b.copyOfRange(from, to).map { it.toInt() and 0xff }
+        // beat-link STATUS_PAYLOAD rows 0x0d0 and 0x110 (absolute offsets)
+        assertEquals(listOf(0x01, 0x01, 0x01, 0x01, 0x00), at(0xd8, 0xdd))
+        assertEquals(listOf(0x00, 0x15, 0x00, 0x00, 0x07, 0x61, 0x00, 0x00, 0x06, 0x2f), at(0x112, 0x11c))
+    }
 }
