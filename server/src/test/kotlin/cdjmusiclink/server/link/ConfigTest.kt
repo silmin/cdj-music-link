@@ -27,8 +27,22 @@ class ConfigTest {
 
     @Test
     fun fromEnvRejectsInvalidNumber() {
-        for (v in listOf("0", "16", "abc", "")) {
+        for (v in listOf("0", "16", "abc", " x ")) {
             assertThrows<IllegalArgumentException> { Config.fromEnv(mapOf("DEVICE_NUMBER" to v)) }
+        }
+        for (v in listOf("0", "65536", "abc")) {
+            assertThrows<IllegalArgumentException> { Config.fromEnv(mapOf("PORT" to v)) }
+        }
+    }
+
+    @Test
+    fun blankValuesMeanUnset() {
+        for (v in listOf("", " ", "\t")) {
+            val c = Config.fromEnv(mapOf("DEVICE_NUMBER" to v, "PORT" to v, "DEVICE_NAME" to v, "LOG_LEVEL" to v))
+            assertNull(c.deviceNumber)
+            assertEquals(17080, c.port)
+            assertEquals("cdj-music-link", c.deviceName)
+            assertEquals("info", c.logLevel)
         }
     }
 }
