@@ -30,7 +30,7 @@
 2. 偽 CDJ が 2 台とも消えたあと戻ってきたとき: `online` が false → true に戻り、`/v1/players` が再び埋まること。Task 10 の統合スクリプトで固定。
 3. CDJ が曲をアンロードしたとき(`isTrackLoaded == false`): `track` が `null` に戻り、`track` イベントが `track: null` で出ること。Task 4 の `PlayerStateTest.trackBecomesNullOnUnload` で固定。
 4. 波形 detail の `fromMs`/`toMs` が範囲外・逆順・非数のとき: 400 を返し、JSON の `error` に理由が入ること。Task 6 の `WaveformRoutesTest.detailRejectsBadRange` で固定。
-5. SSE クライアントが遅いとき: サーバーのリスナーがブロックせず、遅いクライアント側で古いイベントが落ちること。Task 7 の `EventBusTest.slowSubscriberDropsOldest` で固定。
+5. SSE クライアントが遅いとき: サーバーのリスナーがブロックせず、遅いクライアント側で古いイベントが落ちること。Task 4 の `EventBusTest.slowSubscriberDropsOldest` で固定。
 
 ---
 
@@ -170,7 +170,7 @@ cdj-music-link/
   - `class PlayerState(number:Int, name:String, address:String)` に `fun applyStatus(s: StatusSnapshot, mixerPresent:Boolean, now:Long): Set<Change>`、`fun applyPosition(ms:Long, definitive:Boolean, totalMs:Long?, now:Long)`、`fun applyMetadata(track: Track?)`、`fun applyAvailability(artwork:Boolean?, waveform:Boolean?, beatgrid:Boolean?)`、`fun toDto(): Player`。`StatusSnapshot` は CdjStatus から取り出した純データ(`playing, paused, cued, looping, searching, atEnd, busy, trackLoaded, onAir, synced, master, bpmX100:Int, pitchPct:Double, effectiveTempo:Double?, beatNumber:Int?, beatWithinBar:Int?, rekordboxId:Int, sourcePlayer:Int, slot:Slot, type:TrackType`)。`Change` は `enum { PLAY_STATE, FLAGS, TRACK, MASTER }`
   - `class Store(bus: EventBus, clock: () -> Long)` に `fun upsertDevice(d: Device)`, `fun removeDevice(number:Int)`, `fun devices(): List<Device>`, `fun players(): List<Player>`, `fun player(n:Int): Player?`, `fun status(n:Int, s: StatusSnapshot)`, `fun position(n:Int, ms:Long, definitive:Boolean, totalMs:Long?)`, `fun metadata(n:Int, track: Track?)`, `fun master(player:Int?, tempo:Double?)`, `fun masterInfo(): MasterInfo`, `fun online(flag:Boolean)`, `fun mixerPresent(): Boolean`, `fun beat(n:Int, e: BeatEvent)`(そのまま publish)
 
-- [ ] **Step 1: テストを書く** — `EventBusTest.slowSubscriberDropsOldest`(購読者が collect しないまま 300 件 publish → 購読再開後に受け取る最初の id が 44 以上、つまり古い方が落ちる)、`PlayerStateTest.positionIsNullBeforeTimeFinderKnows`(status だけ適用 → `toDto().position == null`)、`PlayerStateTest.trackBecomesNullOnUnload`(trackLoaded=true,id=5 → `track.id == 5`、次に trackLoaded=false → `track == null` かつ戻り値に `TRACK`)、`PlayerStateTest.onAirNullWithoutMixer`(`mixerPresent=false` → `isOnAir == null`)、`StoreTest.statusChangeEmitsPlayerEventOnlyOnChange`(同じ snapshot を 2 回 → `PlayerEvent` は 1 回)、`StoreTest.removeDeviceEmitsDisconnected`
+- [ ] **Step 1: テストを書く** — `EventBusTest.slowSubscriberDropsOldest`(購読者が collect しないまま 300 件 publish → 購読再開後に受け取る最初の id が 44 以上、つまり古い方が落ちる)、`PlayerStateTest.positionIsNullBeforeTimeFinderKnows`(status だけ適用 → `toDto().position == null`)、`PlayerStateTest.trackBecomesNullOnUnload`(trackLoaded=true,id=5 → `track.id == 5`、次に trackLoaded=false → `track == null` かつ戻り値に `TRACK`)、`PlayerStateTest.onAirNullWithoutMixer`(`mixerPresent=false` → `isOnAir == null`)、`StoreTest.statusChangeEmitsPlayerEventOnlyOnChange`(同じ snapshot を 2 回 → `PlayerEvent` は 1 回)、`StoreTest.metadataEmitsTrackEvent`(`metadata(1, track)` → `TrackEvent(player=1, track=track)`、`metadata(1, null)` → `TrackEvent(1, null)`)、`StoreTest.removeDeviceEmitsDisconnected`
 - [ ] **Step 2: Run** `./gradlew :server:test --tests 'cdjmusiclink.server.state.*'` Expected: FAIL
 - [ ] **Step 3: 実装**。`tempo` は `effectiveTempo`、`trackBpm` は `bpmX100 == 0xffff` なら `null`。`remainingMs = totalMs - ms`(`totalMs` 不明なら `null`)。
 - [ ] **Step 4: Run** 同コマンド Expected: PASS
