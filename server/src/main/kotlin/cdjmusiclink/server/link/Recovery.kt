@@ -8,8 +8,10 @@ internal object Recovery {
     /**
      * リンクを落として待機に戻すべきか。通知の種類や発生元では判断せず、評価時点の実状態だけで決める。
      * beat-link の停止通知は別スレッドで遅れて届くため、自分で止めた分の通知が再起動後に来ても誤判定しない。
+     * [findersHealthy] は起動した Finder がすべて動いているか。VirtualCdj が動いたまま Finder だけ止まった場合も落とす。
      */
-    fun isDown(virtualCdjRunning: Boolean, deviceCount: Int): Boolean = !virtualCdjRunning || deviceCount == 0
+    fun isDown(virtualCdjRunning: Boolean, deviceCount: Int, findersHealthy: Boolean): Boolean =
+        !virtualCdjRunning || deviceCount == 0 || !findersHealthy
 
     /** [busy] が false になるまで [pollMs] 間隔で待つ。[timeoutMs] 以内に静まれば true。 */
     suspend fun awaitQuiet(timeoutMs: Long, pollMs: Long, busy: () -> Boolean): Boolean =

@@ -12,14 +12,19 @@ import org.junit.jupiter.api.Test
 class RecoveryTest {
     @Test
     fun staleStopSignalWhileRunningWithDevicesIsIgnored() {
-        assertFalse(Recovery.isDown(virtualCdjRunning = true, deviceCount = 2))
+        assertFalse(Recovery.isDown(virtualCdjRunning = true, deviceCount = 2, findersHealthy = true))
+    }
+
+    @Test
+    fun downWhenAFinderStoppedWhileVirtualCdjRuns() {
+        assertTrue(Recovery.isDown(virtualCdjRunning = true, deviceCount = 2, findersHealthy = false))
     }
 
     @Test
     fun downWhenNoDevicesOrVirtualCdjStopped() {
-        assertTrue(Recovery.isDown(virtualCdjRunning = true, deviceCount = 0))
-        assertTrue(Recovery.isDown(virtualCdjRunning = false, deviceCount = 2))
-        assertTrue(Recovery.isDown(virtualCdjRunning = false, deviceCount = 0))
+        assertTrue(Recovery.isDown(virtualCdjRunning = true, deviceCount = 0, findersHealthy = true))
+        assertTrue(Recovery.isDown(virtualCdjRunning = false, deviceCount = 2, findersHealthy = true))
+        assertTrue(Recovery.isDown(virtualCdjRunning = false, deviceCount = 0, findersHealthy = true))
     }
 
     @Test

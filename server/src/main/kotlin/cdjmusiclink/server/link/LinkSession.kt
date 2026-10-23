@@ -106,7 +106,7 @@ class LinkSession(
             withTimeoutOrNull(POLL_MS) { wake.receive() }
             val cdj = VirtualCdj.getInstance().isRunning
             val devices = DeviceFinder.getInstance().currentDevices.size
-            if (Recovery.isDown(cdj, devices)) return
+            if (Recovery.isDown(cdj, devices, findersRunning())) return
         }
     }
 
@@ -176,6 +176,15 @@ class LinkSession(
             }
         }
     }
+
+    /** [bringUp] で起動した Finder がすべて動いているか。 */
+    private fun findersRunning(): Boolean =
+        BeatFinder.getInstance().isRunning &&
+            MetadataFinder.getInstance().isRunning &&
+            ArtFinder.getInstance().isRunning &&
+            BeatGridFinder.getInstance().isRunning &&
+            WaveformFinder.getInstance().isRunning &&
+            TimeFinder.getInstance().isRunning
 
     private fun anyRunning(): Boolean =
         TimeFinder.getInstance().isRunning ||
