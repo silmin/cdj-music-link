@@ -1,0 +1,10 @@
+# Raspberry Pi 向け。手順は deploy/pi-setup.md。
+#
+# network_mode: host が必須。Pro DJ Link は UDP ブロードキャスト(50000/50001/50002)と
+# Pi 実インタフェースのアドレス宛てユニキャストを使うため、bridge ネットワークの NAT 越しでは動かない。
+services:
+  server:
+    image: ghcr.io/silmin/cdj-music-link-server:latest
+    network_mode: host
+    restart: unless-stopped
+    env_file: .env
