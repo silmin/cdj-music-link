@@ -4,6 +4,7 @@ import cdjmusiclink.server.link.toDto
 import cdjmusiclink.server.model.ApiJson
 import cdjmusiclink.server.model.Health
 import cdjmusiclink.server.model.Player
+import cdjmusiclink.server.state.EventBus
 import cdjmusiclink.server.state.NowPlaying
 import cdjmusiclink.server.state.Store
 import io.ktor.http.ContentType
@@ -25,21 +26,30 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import io.ktor.server.sse.SSE
 
 private val PLAYER_RANGE = 1..15
 
-fun Application.apiModule(store: Store, session: SessionInfo, assets: AssetSource) {
+fun Application.apiModule(
+    store: Store,
+    session: SessionInfo,
+    assets: AssetSource,
+    bus: EventBus,
+    clock: () -> Long = System::currentTimeMillis,
+) {
     install(CORS) {
         anyHost()
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Options)
     }
     install(ContentNegotiation) { json(ApiJson.json) }
+    install(SSE)
 
     routing {
         route("/v1") {
             systemRoutes(store, session)
             playerRoutes(store, assets)
+            streamRoute(store, bus, clock)
         }
         docsRoutes()
     }

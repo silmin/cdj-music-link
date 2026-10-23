@@ -33,14 +33,14 @@ class ContractTest {
 
     @Test
     fun allGetResponsesMatchSpec() = testApplication {
-        application { apiModule(filledStore(), FakeSession(), FixtureAssets()) }
+        application { apiModule(filledStore(), FakeSession(), FixtureAssets(), EventBus()) }
         val errors = paths.flatMap { check(it, client.get(it)) }
         assertTrue(errors.isEmpty(), errors.joinToString("\n"))
     }
 
     @Test
     fun nowPlayingNullMatchesSpec() = testApplication {
-        application { apiModule(Store(EventBus()) { 1 }, FakeSession(online = false, deviceNumber = null), FixtureAssets()) }
+        application { apiModule(Store(EventBus()) { 1 }, FakeSession(online = false, deviceNumber = null), FixtureAssets(), EventBus()) }
         val res = client.get("/v1/now-playing")
         assertTrue(res.bodyAsText() == "null")
         val errors = check("/v1/now-playing", res) + check("/v1/health", client.get("/v1/health"))

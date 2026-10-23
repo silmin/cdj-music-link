@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test
 class RoutesTest {
     private fun app(store: Store = filledStore(), session: SessionInfo = FakeSession(), block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
-            application { apiModule(store, session, FixtureAssets()) }
+            application { apiModule(store, session, FixtureAssets(), EventBus()) }
             block()
         }
 

@@ -26,8 +26,7 @@ fun main() {
     val session = LinkSession(config, store, CoroutineScope(SupervisorJob() + Dispatchers.IO))
     session.start()
 
-    // SSE(次タスク)は bus を apiModule に渡して /v1/stream を足す。
     embeddedServer(CIO, port = config.port, host = "0.0.0.0") {
-        apiModule(store, LinkSessionInfo(session, store, BuildInfo.VERSION), LinkAssetSource())
+        apiModule(store, LinkSessionInfo(session, store, BuildInfo.VERSION), LinkAssetSource(), bus)
     }.start(wait = true)
 }

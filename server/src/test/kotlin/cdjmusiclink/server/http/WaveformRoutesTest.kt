@@ -1,5 +1,6 @@
 package cdjmusiclink.server.http
 
+import cdjmusiclink.server.state.EventBus
 import cdjmusiclink.server.model.ApiJson
 import cdjmusiclink.server.model.BeatGridDto
 import cdjmusiclink.server.model.ErrorDto
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.Test
 
 class WaveformRoutesTest {
     private fun app(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
-        application { apiModule(filledStore(), FakeSession(), FixtureAssets()) }
+        application { apiModule(filledStore(), FakeSession(), FixtureAssets(), EventBus()) }
         block()
     }
 
