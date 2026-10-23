@@ -1,0 +1,5 @@
+Third-party notices
+
+This project uses beat-link (https://github.com/Deep-Symmetry/beat-link) as a
+dependency. beat-link is copyright Deep Symmetry, LLC and is licensed under the
+Eclipse Public License 2.0.
