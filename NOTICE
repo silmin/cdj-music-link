@@ -7,3 +7,7 @@ Eclipse Public License 2.0.
 Sample track data (server/src/test/resources/fixtures/sample1) from Beat Link Trigger
 (https://github.com/Deep-Symmetry/beat-link-trigger), copyright Deep Symmetry, LLC,
 licensed under the Eclipse Public License 2.0.
+
+The keep-alive, status and beat packet templates in fake-cdj/src/main/kotlin/cdjmusiclink/fakecdj/Packets.kt
+are derived from beat-link's VirtualCdj (https://github.com/Deep-Symmetry/beat-link), copyright
+Deep Symmetry, LLC, licensed under the Eclipse Public License 2.0.
