@@ -153,8 +153,10 @@ object Listeners {
                 store.upsertDevice(Device(n, a.deviceName, a.address.hostAddress, deviceKindOf(n)))
                 if (n < PLAYER_LIMIT) {
                     positions.computeIfAbsent(n) {
-                        TrackPositionListener { u: TrackPositionUpdate ->
-                            guarded("movementChanged") { store.position(n, u.milliseconds, u.definitive, totalMs(n)) }
+                        // 位置不明時（登録直後を含む）は null が来る。非 null 型にすると Kotlin の引数チェックで
+                        // addTrackPositionListener ごと例外になり、TimeFinder 側に登録だけが残る。
+                        TrackPositionListener { u: TrackPositionUpdate? ->
+                            if (u != null) guarded("movementChanged") { store.position(n, u.milliseconds, u.definitive, totalMs(n)) }
                         }.also { TimeFinder.getInstance().addTrackPositionListener(n, it) }
                     }
                 }
