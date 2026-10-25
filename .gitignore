@@ -6,3 +6,4 @@ build/
 .superpowers/
 deploy/.env
 deploy/media/.env
+tui/cdj-tui

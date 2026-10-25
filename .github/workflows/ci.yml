@@ -18,8 +18,14 @@ jobs:
           distribution: temurin
           java-version: "25"
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tui/go.mod
+          cache-dependency-path: tui/go.sum
       - run: ./gradlew test
       - run: npx -y @redocly/cli@1 lint openapi/openapi.yaml
+      - name: tui
+        run: cd tui && test -z "$(gofmt -l .)" && go vet ./... && go test ./... && go build ./cmd/cdj-tui
 
   emu-test:
     runs-on: ubuntu-latest

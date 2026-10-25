@@ -92,6 +92,11 @@ scripts/emu-watch.sh [--beats] [--no-scenario] [--keep]
 
 [`deploy/pi-setup.md`](deploy/pi-setup.md) を参照。`network_mode: host` が必須。
 
+## 端末 UI
+
+`tui/` に API だけを見る Go 製の端末 UI(`cdj-tui`)がある。サーバが模擬でも Pi でも同じ画面が出る。
+ビルド・キー・画面の読み方は [`tui/README.md`](tui/README.md)。
+
 ## 開発
 
 ```sh
