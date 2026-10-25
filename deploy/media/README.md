@@ -45,3 +45,16 @@ EMU_MEDIA=1 MEDIA_TRACK_ID=308 scripts/emu-test.sh          # 結合テスト
 - `media` も `/v1/players` に 1 台として出る(合計 3 台)。
 - 起動順: `server` は `depends_on: media`(`required: false`、プロファイル無効時は無視される)で media の後にコンテナが起動する。prolink が device 4 を確保するのはコンテナ起動から約 10 秒後で、server の番号確保とどちらが先かは保証されない。ログを確認した実行では、いずれも server が 3、media が 4 になった。
 - USB にない id をロードすると、prolink は空のメタデータを返す。server はそれを `track.title: null` として返し、`online` のまま。
+
+## 動かし続けて眺める: `scripts/emu-watch.sh`
+
+模擬環境を起動したまま、server の SSE をイベントごとに 1 行で表示する(`HH:MM:SS` 付き)。既定では USB の実在曲 id を `prolink tracks` で拾い、`fake-cdj-1` / `fake-cdj-2` に交互にロード・再生する DJ 風シナリオも流す(`scenario:` 始まりの行がシナリオ側の操作)。
+
+```sh
+scripts/emu-watch.sh                 # media 込み(deploy/media/.env があれば自動)。Ctrl-C で compose down して終了
+scripts/emu-watch.sh --beats         # 小節頭のビートも表示
+scripts/emu-watch.sh --no-scenario   # 観測だけ
+scripts/emu-watch.sh --keep          # 終了時に down しない
+```
+
+表示は `link online`、`device 4 connected …`、`player 1  playing  128.0 BPM  master`、`player 1  track loaded  id=308 …`、`player 1  metadata  "曲名" — アーティスト …`、`tempo master → player 1 …`。環境変数: `EMU_MEDIA`(0 で media なし)、`EMU_SWITCH_SEC`(既定 45)、`EMU_OVERLAP_SEC`(既定 12)、`MEDIA_ROOT`、`MEDIA_DEVICE`、`MEDIA_TRACK_ID`、`BASE`。

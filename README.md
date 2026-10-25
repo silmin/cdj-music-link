@@ -31,6 +31,14 @@ curl -s localhost:17080/v1/players/1 | jq .track.title
 
 `media` イメージは GPL-3.0 の prolink を含むため、手元の模擬環境専用で、GHCR には上げない。
 
+### 動かし続けて眺める
+
+```sh
+scripts/emu-watch.sh [--beats] [--no-scenario] [--keep]
+```
+
+模擬環境を起動したまま、SSE のイベントを 1 行ずつ(`HH:MM:SS` 付きで)表示する。`fake-cdj` の 2 台に曲を交互にロードする DJ 風シナリオも既定で流れる(`scenario:` 始まりの行)。Ctrl-C で `compose down` して終了。詳細は [`deploy/media/README.md`](deploy/media/README.md)。
+
 ## API
 
 ベースパスは `/v1`。時刻は epoch ミリ秒。詳細は `/docs`。
