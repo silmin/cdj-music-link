@@ -37,7 +37,7 @@ curl -s localhost:17080/v1/players/1 | jq .track.title
 scripts/emu-watch.sh [--beats] [--no-scenario] [--keep]
 ```
 
-模擬環境を起動したまま、SSE のイベントを 1 行ずつ(`HH:MM:SS` 付きで)表示する。`fake-cdj` の 2 台に曲を交互にロードする DJ 風シナリオも既定で流れる(`scenario:` 始まりの行)。Ctrl-C で `compose down` して終了。詳細は [`deploy/media/README.md`](deploy/media/README.md)。
+模擬環境を起動したまま、SSE のイベントを 1 行ずつ(`HH:MM:SS` 付きで)表示する。`fake-cdj` の 2 台に曲を交互にロードする DJ 風シナリオも既定で流れる(`scenario:` 始まりの行)。`GET /v1/now-playing` の結果が変わると `now playing → player 1  "曲名" — アーティスト` も出る。Ctrl-C で `compose down` して終了。詳細は [`deploy/media/README.md`](deploy/media/README.md)。
 
 ## API
 

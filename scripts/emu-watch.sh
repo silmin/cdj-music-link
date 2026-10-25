@@ -51,7 +51,7 @@ wait_online() {
   exit 1
 }
 
-kill_tree() { pkill -P "$1" 2>/dev/null; kill "$1" 2>/dev/null; }
+kill_tree() { local c; c=$(pgrep -P "$1"); kill "$1" 2>/dev/null; [[ -n "$c" ]] && kill $c 2>/dev/null; }
 cleanup() {
   trap '' INT TERM
   echo
@@ -59,6 +59,7 @@ cleanup() {
   local p
   for p in ${PIDS[@]+"${PIDS[@]}"}; do kill_tree "$p"; done
   wait 2>/dev/null
+  rm -rf "$NP_DIR"
   [[ "$KEEP" == 1 ]] || "${COMPOSE[@]}" down >/dev/null 2>&1
   exit 0
 }
@@ -111,19 +112,41 @@ fmt_player_seed() {
   cache_set "$n" st "$(jq -r '[.playState,.isPlaying,.isTempoMaster,.isOnAir]|join(",")' <<<"$1")"
 }
 
+# --- derived "now playing" line ------------------------------------------------
+# GET /v1/now-playing is not an SSE event: poll it (coalesced, trailing 300 ms) after
+# player/track/master events and the snapshot, and print only when it changed.
+NP_DIR=$(mktemp -d)
+np_poll() {
+  local body key line
+  body=$(curl -sf --max-time 5 "$BASE/v1/now-playing") || return
+  key=$(jq -r 'if . == null then "none" else "\(.number)|\(.track.id // "")|\(.track.title // "")" end' <<<"$body")
+  [[ "$(cat "$NP_DIR/last" 2>/dev/null)" == "$key" ]] && return
+  printf '%s' "$key" >"$NP_DIR/last"
+  line=$(jq -r 'if . == null then "now playing → none" else "now playing → player \(.number)  "
+    + (if .track.title then "\"\(.track.title)\" — \(.track.artist // "(no artist)")"
+       else "id=\(.track.id // "?") (metadata pending)" end) end' <<<"$body")
+  say "$line"
+}
+np_trigger() {
+  [[ -e "$NP_DIR/pending" ]] && return
+  : >"$NP_DIR/pending"
+  ( sleep 0.3; rm -f "$NP_DIR/pending"; np_poll ) &
+  disown
+}
+
 dispatch() {  # $1 = event name, $2 = data
   local ev=$1 d=$2 line
   case $ev in
     online)   [[ "$(jq -r .online <<<"$d")" == true ]] && say "link online" || say "link offline" ;;
     device)   say "$(jq -r '"device \(.device.number) \(.action)  \(.device.name) \(.device.address)"' <<<"$d")" ;;
-    player)   fmt_player "$d" ;;
-    track)    fmt_track "$d" ;;
-    master)   say "$(jq -r 'if .player then "tempo master → player \(.player) (\(.tempo|.*10|round/10|tostring|if test("\\.") then . else .+".0" end) BPM)" else "tempo master → none" end' <<<"$d")" ;;
+    player)   fmt_player "$d"; np_trigger ;;
+    track)    fmt_track "$d"; np_trigger ;;
+    master)   say "$(jq -r 'if .player then "tempo master → player \(.player) (\(.tempo|.*10|round/10|tostring|if test("\\.") then . else .+".0" end) BPM)" else "tempo master → none" end' <<<"$d")"; np_trigger ;;
     beat)     [[ "$BEATS" == 1 ]] || return
               line=$(jq -r 'select(.beatWithinBar == 1 and .beatNumber != null) | ((.position.ms // 0)/100|round) as $t
                 | "player \(.player)  bar  beat \(.beatNumber)  \(.tempo|.*10|round/10|tostring|if test("\\.") then . else .+".0" end) BPM  pos \($t/10|floor).\($t%10)s"' <<<"$d")
               [[ -n "$line" ]] && say "$line" ;;
-    snapshot) fmt_snapshot "$d" ;;
+    snapshot) fmt_snapshot "$d"; np_trigger ;;
   esac
 }
 

@@ -57,4 +57,4 @@ scripts/emu-watch.sh --no-scenario   # 観測だけ
 scripts/emu-watch.sh --keep          # 終了時に down しない
 ```
 
-表示は `link online`、`device 4 connected …`、`player 1  playing  128.0 BPM  master`、`player 1  track loaded  id=308 …`、`player 1  metadata  "曲名" — アーティスト …`、`tempo master → player 1 …`。環境変数: `EMU_MEDIA`(0 で media なし)、`EMU_SWITCH_SEC`(既定 45)、`EMU_OVERLAP_SEC`(既定 12)、`MEDIA_ROOT`、`MEDIA_DEVICE`、`MEDIA_TRACK_ID`、`BASE`。
+表示は `link online`、`device 4 connected …`、`player 1  playing  128.0 BPM  master`、`player 1  track loaded  id=308 …`、`player 1  metadata  "曲名" — アーティスト …`、`tempo master → player 1 …`。加えて `GET /v1/now-playing` を player/track/master イベントの後(最大 300 ms に 1 回)に引き、結果が変わったときだけ `now playing → player 1  "曲名" — アーティスト`(該当なしは `now playing → none`)を出す。環境変数: `EMU_MEDIA`(0 で media なし)、`EMU_SWITCH_SEC`(既定 45)、`EMU_OVERLAP_SEC`(既定 12)、`MEDIA_ROOT`、`MEDIA_DEVICE`、`MEDIA_TRACK_ID`、`BASE`。
