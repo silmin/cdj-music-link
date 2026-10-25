@@ -30,3 +30,11 @@ Task 10: review clean (deliverables); minor (deferred): Dockerfiles COPY . . bef
 - server(自動で 3)と media(`--number 4`)の番号取得は原理的に競合しうる。観測した全回で server=3、media=4 だったが、`depends_on` は起動順の目安に過ぎない
 - Conversions の `blankToNull` / `zeroToNull` が public の拡張関数(internal で足りる)。`toTrack` 本体は TrackMetadata を組めないため未テストのまま
 - Task A: Control の `/state` と FakeCdj のパケットはまだ `config.number` を読む(Deck.number と常に一致)。sourcePlayer 省略時の `/load` を番号 1 以外のデッキで検証するテストがない
+
+## cdj-tui(2026-10-25 の最終レビューで後回しにした点)
+- 波形の取得に失敗すると(404 以外でも)その曲の間は再取得しない。Wi-Fi の一時的なタイムアウトで波形行が空のままになる。404 以外は再試行するのが望ましい
+- 拍がまだ届いていない間の位置補間は Pi の `updatedAt` とラップトップの時計の差を使う。Pi に NTP がないと再接続直後に位置が一瞬飛ぶ。`serverTime` からオフセットを取ると直る
+- 80 列のデッキ枠では和文タイトルが 5 文字程度しか見えない(NOW PLAYING 側は長く出る)。狭い幅ではタイトルを独立行にする案
+- 「再生中なのに 90 秒イベントなし」の再接続規則は、ビートグリッドのない曲(拍イベントが来ない)で約 90 秒ごとの無駄な再接続を起こしうる(未確認)
+- 端末の「曖昧幅文字を全角で表示」設定では罫線やブロック文字がはみ出す可能性(未検証)
+- `.gitignore` の `tui/cdj-tui` と `tui/.gitignore` の `/cdj-tui` が重複

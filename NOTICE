@@ -30,3 +30,7 @@ Runtime dependencies (also shipped inside the Docker images):
 
 The Pro DJ Link protocol knowledge behind this project comes from Deep Symmetry's
 public analysis (https://djl-analysis.deepsymmetry.org/); no code was copied from it.
+
+Go terminal UI (tui/, not distributed as a binary; built from source):
+  github.com/charmbracelet/bubbletea, lipgloss, bubbles   Charm   MIT
+  transitive: golang.org/x/sys, golang.org/x/text          Go      BSD-3-Clause; others MIT
