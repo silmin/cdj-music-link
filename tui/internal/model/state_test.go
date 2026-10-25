@@ -361,3 +361,44 @@ func TestTrackTitleIsNotEscaped(t *testing.T) {
 		t.Fatalf("got %q", lastLog(s))
 	}
 }
+
+func TestTrackChangeDropsStaleBeat(t *testing.T) {
+	at := time.Unix(1000, 0)
+	beat := func(s *State) {
+		ms := int64(200000)
+		s.Apply(Event{Kind: EventBeat, At: at, Beat: &SseBeat{Player: 1, BeatNumber: ip(400), Position: &BeatPosition{Ms: ms}}})
+	}
+	tr := func(id int) *Track { return &Track{ID: id, SourcePlayer: 4, Slot: "usb"} }
+
+	s := NewState()
+	s.Apply(Event{Kind: EventPlayer, At: at, Player: &Player{Number: 1, PlayState: "playing", Track: tr(10)}})
+	beat(s)
+	// same track, state change only: beat kept
+	s.Apply(Event{Kind: EventPlayer, At: at, Player: &Player{Number: 1, PlayState: "paused", Track: tr(10)}})
+	if _, ok := s.Beats[1]; !ok {
+		t.Fatal("beat dropped although the track did not change")
+	}
+	// metadata arriving for the same id: kept
+	title := "x"
+	s.Apply(Event{Kind: EventTrack, At: at, Track: &SseTrack{Player: 1, Track: &Track{ID: 10, SourcePlayer: 4, Slot: "usb", Title: &title}}})
+	if _, ok := s.Beats[1]; !ok {
+		t.Fatal("beat dropped on metadata for the same track")
+	}
+	// new track via track event
+	s.Apply(Event{Kind: EventTrack, At: at, Track: &SseTrack{Player: 1, Track: tr(11)}})
+	if _, ok := s.Beats[1]; ok {
+		t.Fatal("stale beat survived a track event")
+	}
+	// new track via player event
+	beat(s)
+	s.Apply(Event{Kind: EventPlayer, At: at, Player: &Player{Number: 1, PlayState: "cued", Track: tr(12)}})
+	if _, ok := s.Beats[1]; ok {
+		t.Fatal("stale beat survived a player event with a new track")
+	}
+	// unload
+	beat(s)
+	s.Apply(Event{Kind: EventTrack, At: at, Track: &SseTrack{Player: 1, Track: nil}})
+	if _, ok := s.Beats[1]; ok {
+		t.Fatal("stale beat survived unload")
+	}
+}

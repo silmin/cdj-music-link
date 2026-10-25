@@ -151,6 +151,9 @@ func (s *State) applyBeat(b *SseBeat, at time.Time) {
 
 func (s *State) applyPlayer(p Player, at time.Time) {
 	prev, existed := s.Players[p.Number]
+	if existed && trackIdentity(prev.Track) != trackIdentity(p.Track) {
+		delete(s.Beats, p.Number)
+	}
 	s.Players[p.Number] = p
 	if s.NowPlaying != nil && s.NowPlaying.Number == p.Number {
 		np := p
@@ -163,6 +166,9 @@ func (s *State) applyPlayer(p Player, at time.Time) {
 
 func (s *State) applyTrack(t *SseTrack, at time.Time) {
 	if p, ok := s.Players[t.Player]; ok {
+		if trackIdentity(p.Track) != trackIdentity(t.Track) {
+			delete(s.Beats, t.Player)
+		}
 		p.Track = t.Track
 		s.Players[t.Player] = p
 		if s.NowPlaying != nil && s.NowPlaying.Number == t.Player {
@@ -232,4 +238,13 @@ func (s *State) AddLog(at time.Time, line string) {
 	if over := len(s.Log) - MaxLog; over > 0 {
 		s.Log = append(s.Log[:0:0], s.Log[over:]...)
 	}
+}
+
+// trackIdentity identifies a loaded track (ids are per source media); "" = none.
+// A change means the last beat belongs to another track and is dropped.
+func trackIdentity(t *Track) string {
+	if t == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d/%s/%d", t.SourcePlayer, t.Slot, t.ID)
 }

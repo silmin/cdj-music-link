@@ -176,3 +176,79 @@ func waveMsgs(cmd tea.Cmd) []waveformMsg {
 	}
 	return nil
 }
+
+type countingClient struct {
+	fakeClient
+	npCalls int
+}
+
+func (c *countingClient) NowPlaying() (*model.Player, error) {
+	c.npCalls++
+	return c.fakeClient.NowPlaying()
+}
+
+func TestNowPlayingCoalesced(t *testing.T) {
+	c := &countingClient{fakeClient: fakeClient{waveCalls: map[int]int{}}}
+	m := New(c, model.Snapshot{Online: true, Players: []model.Player{player(1, 10, true, false)}})
+	m.nowFn = func() time.Time { return t0 }
+	open(m)
+	// several triggers within the window: player, track, master, player
+	ticks := 0
+	for _, e := range []model.Event{
+		{Kind: model.EventPlayer, Player: ptr(player(1, 10, true, false))},
+		{Kind: model.EventTrack, Track: &model.SseTrack{Player: 1, Track: &model.Track{ID: 10}}},
+		{Kind: model.EventMaster, Master: &model.MasterInfo{Player: ptr(1)}},
+		{Kind: model.EventPlayer, Player: ptr(player(1, 10, false, false))},
+	} {
+		e.At = t0
+		m.Update(eventMsg{m.gen, e})
+		if m.npPending {
+			ticks++
+		}
+	}
+	if !m.npPending {
+		t.Fatal("no poll scheduled")
+	}
+	c.np = &model.Player{Number: 1, Track: &model.Track{ID: 10, Title: ptr("Song")}}
+	_, cmd := m.Update(npDueMsg{})
+	m.Update(cmd())
+	if c.npCalls != 1 {
+		t.Fatalf("GET /v1/now-playing called %d times, want 1", c.npCalls)
+	}
+	if m.st.NowPlaying == nil || !logHas(m, `now playing → player 1  "Song"`) {
+		t.Fatalf("now playing not applied: %v", m.st.Log)
+	}
+	// a trigger after the poll schedules a new one
+	m.Update(eventMsg{m.gen, model.Event{Kind: model.EventPlayer, At: t0, Player: ptr(player(1, 10, true, false))}})
+	if !m.npPending {
+		t.Fatal("trigger after the poll did not schedule another")
+	}
+}
+
+func TestKeys(t *testing.T) {
+	m := newTestModel(&fakeClient{waveCalls: map[int]int{}})
+	if !m.blink || !m.wave {
+		t.Fatal("defaults should be on")
+	}
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b")})
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("w")})
+	if m.blink || m.wave {
+		t.Fatal("b/w did not toggle off")
+	}
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b")})
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("w")})
+	if !m.blink || !m.wave {
+		t.Fatal("b/w did not toggle back on")
+	}
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("q")}, {Type: tea.KeyCtrlC}} {
+		cancelled := false
+		m.cancel = func() { cancelled = true }
+		_, cmd := m.Update(k)
+		if cmd == nil {
+			t.Fatalf("%s: no cmd", k)
+		}
+		if _, ok := cmd().(tea.QuitMsg); !ok || !cancelled {
+			t.Fatalf("%s: quit=%v cancelled=%v", k, ok, cancelled)
+		}
+	}
+}

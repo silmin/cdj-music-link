@@ -212,3 +212,53 @@ func TestTruncate(t *testing.T) {
 		t.Errorf("%q", s)
 	}
 }
+
+func TestInterpolatePausedPrefersPlayerPosition(t *testing.T) {
+	// beats came while playing; then paused and cued back to 0:05
+	lb := model.LastBeat{At: t0, PositionMs: ptr(int64(90000)), BeatNumber: ptr(160)}
+	p := model.Player{IsPlaying: false, Position: &model.Position{Ms: 5000, UpdatedAt: t0.Add(time.Second).UnixMilli()}}
+	if got := positionMs(p, &lb, t0.Add(10*time.Second)); got == nil || *got != 5000 {
+		t.Fatalf("paused deck shows %v, want player position 5000", got)
+	}
+	// playing still uses the beat
+	p.IsPlaying = true
+	if got := positionMs(p, &lb, t0); got == nil || *got != 90000 {
+		t.Fatalf("playing: %v", got)
+	}
+}
+
+func TestNewTrackIgnoresOldBeat(t *testing.T) {
+	st := fabricate(1)
+	// last beat of the previous track at 4:00
+	st.Beats[1] = model.LastBeat{At: t0, PositionMs: ptr(int64(240000)), BeatNumber: ptr(400), BeatWithinBar: ptr(1)}
+	np := st.Players[1]
+	np.Track = &model.Track{ID: 999, SourcePlayer: 4, Slot: "usb", DurationSec: ptr(200)}
+	np.PlayState, np.IsPlaying = "cued", false
+	np.Position = &model.Position{Ms: 0, UpdatedAt: t0.UnixMilli()}
+	st.Apply(model.Event{Kind: model.EventPlayer, At: t0, Player: &np})
+	out := Render(st, Options{Width: 80, Height: 24, Now: t0.Add(time.Second)})
+	if !strings.Contains(out, "00:00 / 03:20") {
+		t.Errorf("deck should show the new track at 00:00\n%s", out)
+	}
+	if strings.Contains(out, "bar 100") || !strings.Contains(out, "bar -") {
+		t.Errorf("NOW PLAYING bar should not come from the old track\n%s", out)
+	}
+}
+
+func TestProgressLineLongClocks(t *testing.T) {
+	st := fabricate(1)
+	p := st.Players[1]
+	p.Track.DurationSec = ptr(7200) // 120:00
+	st.Players[1] = p
+	st.NowPlaying = &p
+	st.Beats[1] = model.LastBeat{At: t0, PositionMs: ptr(int64(6100000))} // 101:40
+	checkFits(t, Render(st, Options{Width: 80, Height: 24, Now: t0}), 80, 24)
+	if out := Render(st, Options{Width: 80, Height: 24, Now: t0}); !strings.Contains(out, "101:40 ▕") || !strings.Contains(out, "▏ 120:00") {
+		t.Errorf("long clocks\n%s", out)
+	}
+	// no duration, position keeps growing
+	p.Track.DurationSec = nil
+	st.Players[1] = p
+	st.NowPlaying = &p
+	checkFits(t, Render(st, Options{Width: 80, Height: 24, Now: t0.Add(time.Hour)}), 80, 24)
+}

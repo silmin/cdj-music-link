@@ -11,11 +11,15 @@ import (
 
 // positionMs is the playback position at now. While playing it advances the
 // last beat's position (or, without one, the player's position) by the
-// elapsed wall time scaled by the pitch. nil when nothing is known.
+// elapsed wall time scaled by the pitch. When not playing the player's own
+// position wins (a cue or seek after the last beat). nil when nothing is known.
 func positionMs(p model.Player, lb *model.LastBeat, now time.Time) *int64 {
 	var base int64
 	var since time.Time
 	switch {
+	case !p.IsPlaying && p.Position != nil:
+		// paused / cued: the player status is newer than the last beat
+		base = p.Position.Ms
 	case lb != nil && lb.PositionMs != nil:
 		base, since = *lb.PositionMs, lb.At
 	case p.Position != nil:

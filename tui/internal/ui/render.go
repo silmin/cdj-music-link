@@ -200,13 +200,14 @@ func nowPlaying(st *model.State, o Options) string {
 		d := int64(*t.DurationSec) * 1000
 		dur = &d
 	}
-	barW := inner - 14
+	left, right := clock(pos), clock(dur)
+	barW := max(inner-lipgloss.Width(left)-lipgloss.Width(right)-4, 0) // " ▕" + "▏ "
 	filled := 0
 	if pos != nil && dur != nil && *dur > 0 {
 		filled = int(float64(*pos) / float64(*dur) * float64(barW))
 		filled = min(max(filled, 0), barW)
 	}
-	lines[1] = clock(pos) + " ▕" + strings.Repeat("█", filled) + dimStyle.Render(strings.Repeat("░", barW-filled)) + "▏ " + clock(dur)
+	lines[1] = left + " ▕" + strings.Repeat("█", filled) + dimStyle.Render(strings.Repeat("░", barW-filled)) + "▏ " + right
 
 	bar, dots := "-", beatDots(p, lb, o)
 	if lb != nil && lb.BeatNumber != nil && *lb.BeatNumber > 0 {
