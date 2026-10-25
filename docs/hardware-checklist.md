@@ -36,3 +36,14 @@
 - [ ] CDJ の電源を落とす → `device` イベント(`disconnected`)が来て、server は `online: true` のまま。入れ直すと `connected` が来る
 - [ ] DJ Link から全機器を外す → `online: false`。繋ぎ直すと `online: true` の `online` イベントが 1 回だけ来る
 - [ ] rekordbox 入りノートPCを LAN に出し入れしても、`/v1/devices` が追従し、番号の衝突が起きない
+
+## PC DJ(rekordbox HID / コントロールモード)の確認
+
+PC DJ は rekordbox PERFORMANCE モードで CDJ を HID コントローラー兼オーディオインターフェースとして使う想定。Pro DJ Link 上に何が流れるかは一次情報で確認できていないので、実機で見る。
+
+- [ ] rekordbox の PC も LAN に参加させ、CDJ をコントロールモード(USB 直結、または DJM-900NXS2 経由の CONTROL MODE (DJM-USB))にする
+- [ ] `/v1/devices` に `rekordbox`(番号 17 付近、kind collection)が出るか
+- [ ] rekordbox のデッキで曲を再生したとき、その CDJ の `/v1/players/N` に `track` が出るか(`slot` が `collection`、`sourcePlayer` が rekordbox の番号になる想定)
+- [ ] `track.title` が埋まるか(rekordbox の dbserver 経路。Pi の番号が 1〜4 であること)
+- [ ] `isPlaying`、`tempo`、拍イベント、`position` が追従するか
+- [ ] 何も出ない場合は代替を決める: Link Export(CDJ 自身で PC のライブラリを再生)か、PC 側エージェント(rekordbox の履歴、遅延あり・拍なし)
