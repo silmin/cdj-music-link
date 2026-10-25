@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start the server alone against a real Pro DJ Link network (no emulator).
 #
-#   scripts/live.sh [up|status|logs|down]     (default: up)
+#   scripts/live.sh [up|status|logs [compose logs args]|down]     (default: up; logs defaults to -f)
 #
 # Mode (LIVE_MODE=compose|jvm, auto-detected when unset):
 #   compose  Linux with docker (the Pi): deploy/compose.yaml, host network, GHCR image, detached.
@@ -76,7 +76,7 @@ case "$LIVE_MODE:$CMD" in
     echo "logs: scripts/live.sh logs    stop: scripts/live.sh down"
     ;;
   compose:down)   "${COMPOSE[@]}" down ;;
-  compose:logs)   exec "${COMPOSE[@]}" logs -f ;;
+  compose:logs)   shift; [[ $# -gt 0 ]] || set -- -f; exec "${COMPOSE[@]}" logs "$@" ;;
   jvm:up)
     echo "building server (gradle)..."
     ./gradlew -q :server:installDist
