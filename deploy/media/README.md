@@ -58,3 +58,14 @@ scripts/emu-watch.sh --keep          # 終了時に down しない
 ```
 
 表示は `link online`、`device 4 connected …`、`player 1  playing  128.0 BPM  master`、`player 1  track loaded  id=308 …`、`player 1  metadata  "曲名" — アーティスト …`、`tempo master → player 1 …`。加えて `GET /v1/now-playing` を player/track/master イベントの後(最大 300 ms に 1 回)に引き、結果が変わったときだけ `now playing → player 1  "曲名" — アーティスト`(該当なしは `now playing → none`)を出す。停止は端末で Ctrl-C。`&` でバックグラウンド起動した場合は bash の仕様で SIGINT が無視されるので `kill -TERM <pid>` を使う(どちらも compose を落として終了する)。シナリオは USB の全曲 id を毎回シャッフルして順に流す(`EMU_SHUFFLE=0` で export 順)。環境変数: `EMU_MEDIA`(0 で media なし)、`EMU_SWITCH_SEC`(既定 45)、`EMU_OVERLAP_SEC`(既定 12)、`EMU_SHUFFLE`(既定 1)、`MEDIA_ROOT`、`MEDIA_DEVICE`、`MEDIA_TRACK_ID`、`BASE`。
+
+## USB を挿さずに回す(ローカル複製)
+
+`scripts/media-snapshot.sh <USBのルート> <保存先>` で、模擬に必要な分だけを複製できる。`.PIONEER`(export.pdb、USBANLZ、Artwork、設定、合計 100 MB 程度)はそのまま、音源 `Contents/` は同じ構成の 0 バイトのダミーにする。server は音源を読まず、prolink serve はパスの存在だけ見るので、曲名・波形・ビートグリッド・ジャケットまで USB と同じに取れる(確認済み)。
+
+```sh
+scripts/media-snapshot.sh /Volumes/nordblue2 ~/src/decodefrens/rekordbox-usb
+# deploy/media/.env の MEDIA_ROOT を保存先に変える
+```
+
+複製先はリポジトリの外に置く(個人のライブラリなのでコミットしない)。実機の CDJ や rekordbox にこの複製を見せてはいけない。
