@@ -5,9 +5,9 @@
 #   scripts/media-snapshot.sh [--audio N|all] <usb-root> <dest-dir>
 #
 # - .PIONEER(または PIONEER)配下はすべて複製する(export.pdb、USBANLZ の解析ファイル、Artwork、設定)。
-# - 音源 Contents/ は同じディレクトリ構成を作り、--audio で指定した数だけ実ファイルを等間隔に選んで
-#   複製し、残りは 0 バイトのダミーにする(既定 20。all で全部、0 で全部ダミー)。
-#   server は音源を読まず、prolink serve はパスの存在しか見ないので、API の確認はダミーでも同じ結果になる。
+# - 音源 Contents/ は --audio で指定した数だけ実ファイルを等間隔に選んで複製する(既定 20。all で全部、
+#   0 で音源なし)。それ以外の音源は複製しない。server は音源を読まず、prolink serve は export.pdb から
+#   曲一覧を作るので、音源が無くても曲名・波形・ビートグリッド・ジャケットは API で同じに取れる(確認済み)。
 #   実ファイルが要るのは、この media を実機 CDJ に LINK で読ませて再生するときだけ。
 # - 複製は模擬専用。実機や rekordbox にこの複製を見せてはいけない。
 set -euo pipefail
@@ -34,10 +34,8 @@ mkdir -p "$dst"
 echo "copying $src/$pioneer -> $dst/.PIONEER"
 rsync -a "$src/$pioneer/" "$dst/.PIONEER/"
 
-echo "recreating $src/Contents under $dst/Contents"
-( cd "$src" && find Contents -type d -print0 ) | ( cd "$dst" && xargs -0 mkdir -p )
-
-# 音源一覧(ソート済み)。等間隔に N 本を選ぶ。
+mkdir -p "$dst/Contents"
+# 音源一覧(ソート済み)から等間隔に N 本を選んで複製する。選ばれなかった音源は複製しない。
 all=$(cd "$src" && find Contents -type f | LC_ALL=C sort)
 total=$(printf '%s\n' "$all" | grep -c . || true)
 if [ "$audio" = "all" ]; then
@@ -47,19 +45,13 @@ elif [ "$audio" -gt 0 ] 2>/dev/null && [ "$total" -gt 0 ]; then
 else
   pick=""
 fi
-
-real=0; dummy=0
+real=0
 while IFS= read -r f; do
   [ -n "$f" ] || continue
-  if printf '%s\n' "$pick" | grep -qxF -- "$f"; then
-    rsync -a "$src/$f" "$dst/$f"; real=$((real+1))
-  else
-    [ -s "$dst/$f" ] && { real=$((real+1)); continue; }   # 以前に実ファイルを置いていれば残す
-    : > "$dst/$f"; dummy=$((dummy+1))
-  fi
-done <<< "$all"
-
-echo "done: $(du -sh "$dst" | cut -f1) total — real audio files: $real, placeholders: $dummy"
+  mkdir -p "$dst/$(dirname "$f")"
+  rsync -a "$src/$f" "$dst/$f"; real=$((real+1))
+done <<< "$pick"
+echo "done: $(du -sh "$dst" | cut -f1) total — audio files copied: $real of $total"
 echo
 echo "deploy/media/.env に次を設定:"
 echo "  MEDIA_ROOT=$dst"

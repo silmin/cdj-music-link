@@ -61,7 +61,7 @@ scripts/emu-watch.sh --keep          # 終了時に down しない
 
 ## USB を挿さずに回す(ローカル複製)
 
-`scripts/media-snapshot.sh [--audio N|all] <USBのルート> <保存先>` で、模擬に必要な分を複製できる。`.PIONEER`(export.pdb、USBANLZ、Artwork、設定、合計 100 MB 程度)はそのまま、音源 `Contents/` は同じ構成を作って `--audio` の数だけ実ファイルを等間隔に選んで複製し(既定 20、`all` で全部、`0` で全部ダミー)、残りは 0 バイトのダミーにする。server は音源を読まず、prolink serve はパスの存在だけ見るので、API で取れる曲名・波形・ビートグリッド・ジャケットはダミーでも実ファイルでも同じ(確認済み)。実ファイルが要るのは、この media を実機 CDJ に LINK で読ませて再生するときだけ。
+`scripts/media-snapshot.sh [--audio N|all] <USBのルート> <保存先>` で、模擬に必要な分を複製できる。`.PIONEER`(export.pdb、USBANLZ、Artwork、設定、合計 100 MB 程度)はそのまま、音源 `Contents/` は `--audio` の数だけ実ファイルを等間隔に選んで複製する(既定 20、`all` で全部、`0` で音源なし)。それ以外は複製しない。波形・ビートグリッドは `USBANLZ/` の解析ファイル、ジャケットは `Artwork/`、再生位置は拍とビートグリッドからの補間で、どれも音源ファイルを読まないので、音源が無い曲でも API の結果は同じ(確認済み)。実ファイルが要るのは、この media を実機 CDJ に LINK で読ませて再生するときだけ。
 
 ```sh
 scripts/media-snapshot.sh /Volumes/nordblue2 ~/src/decodefrens/rekordbox-usb
