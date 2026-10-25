@@ -66,6 +66,12 @@ GHCR のパッケージは既定で private。`pull` の前に次のどちらか
 ```sh
 git clone https://github.com/silmin/cdj-music-link.git
 cd cdj-music-link
+scripts/live.sh                         # .env を作り、pull → up -d → /v1/health を待って機器一覧を出す
+```
+
+`scripts/live.sh` は次と同じ(手で打つならこちら)。
+
+```sh
 cp deploy/.env.example deploy/.env      # 必要なら編集
 docker compose -f deploy/compose.yaml pull
 docker compose -f deploy/compose.yaml up -d

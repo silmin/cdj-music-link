@@ -88,6 +88,20 @@ scripts/emu-watch.sh [--beats] [--no-scenario] [--keep]
 | `DEVICE_NUMBER` | 未指定(自動) | 1〜15。未指定なら 1〜4 の空き番号(dbserver メタデータも使う)、埋まっていれば 5 以降(passive) |
 | `LOG_LEVEL` | `info` | ログレベル |
 
+## 実機 LAN で server だけ動かす
+
+模擬環境なしで、CDJ と同じ LAN に参加して API を出す。
+
+```sh
+scripts/live.sh            # 起動して /v1/health が online になるまで待ち、見えた機器を出す
+scripts/live.sh status     # 今の状態だけ
+scripts/live.sh down       # 停止
+```
+
+Pi(Linux + docker)では `deploy/compose.yaml` を host network で起動する(デタッチ、`scripts/live.sh logs` でログ)。
+Mac などでは Gradle でビルドした JVM をフォアグラウンドで動かす(Docker Desktop の bridge は Pro DJ Link のブロードキャストを通さないため)。
+設定は `deploy/.env`(なければ `.env.example` から作る)。`LIVE_MODE=compose|jvm` で強制、`LIVE_NO_PULL=1` で pull を省略。
+
 ## Raspberry Pi への配備
 
 [`deploy/pi-setup.md`](deploy/pi-setup.md) を参照。`network_mode: host` が必須。

@@ -5,7 +5,7 @@
 
 ## 前日まで
 
-- [ ] Pi: `deploy/pi-setup.md` の 1〜5 を済ませ、`docker compose -f deploy/compose.yaml pull` 済み(会場でイメージを引かない)
+- [ ] Pi: `deploy/pi-setup.md` の 1〜5 を済ませ、`scripts/live.sh` を一度通して(pull 済みにして)おく。会場では `LIVE_NO_PULL=1 scripts/live.sh`
 - [ ] Pi: `deploy/.env` は `DEVICE_NUMBER=` 空(自動)。eth0 は DHCP → link-local フォールバック、wlan0 は API 用
 - [ ] PC: `cd tui && go build ./cmd/cdj-tui` 済み。`curl`、`tcpdump` が使える
 - [ ] 持ち物: rekordbox 書き出し済み USB(解析済み曲入り)、CD か未解析曲(dbserver 経路用)、LAN ケーブル ×3、USB ケーブル(PC DJ 実験用)
@@ -19,7 +19,7 @@
 ## 手順(上から順に。各項目の結果を checklist に書く)
 
 1. **パケット** Pi で `sudo tcpdump -i eth0 -n udp portrange 50000-50002`。CDJ 2 台分の 50000(keep-alive)、50002(status)が見えること。再生すると 50001(beat)
-2. **起動** `/v1/health` が `online: true`、`deviceNumber` が 1〜4、`deviceCount` が 2(CDJ 2 台 + 自分なら 3)。`/v1/devices` に CDJ が 2 台
+2. **起動** Pi で `LIVE_NO_PULL=1 scripts/live.sh`(起動済みなら `scripts/live.sh status`)。`online: true`、`deviceNumber` が 1〜4、devices に CDJ が 2 台出ること
 3. **USB メタデータ** CDJ1 に USB の解析済み曲をロード → `/v1/players/1/track` の `title` が埋まるまでの秒数(NFS 経路)
 4. **dbserver 経路** CD か未解析曲をロード → `title` が埋まるまでの秒数。`deviceNumber` が 5 以上ならこの項目は null のままが正しい
 5. **解析データ** `scripts/smoke.sh` を `BASE=http://cdj-music-link.local:17080` で実行。`artwork`、`waveform/preview`、`waveform/detail`、`beatgrid` が 200。detail の `segments` がカラーなら 1200、ブルーなら 450 近辺
