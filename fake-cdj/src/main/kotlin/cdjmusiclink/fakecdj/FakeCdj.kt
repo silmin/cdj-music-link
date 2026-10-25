@@ -88,6 +88,7 @@ class FakeCdj(
                     synced = st.synced, onAir = st.onAir, bpmX100 = st.bpmX100, beatNumber = st.beatNumber,
                     beatWithinBar = st.beatWithinBar, trackId = st.trackId, trackLoaded = st.trackLoaded,
                     slot = st.slot, trackType = st.trackType, packetCounter = counter++, syncCounter = 1,
+                    sourcePlayer = st.sourcePlayer,
                 ),
             )
             for (peer in peers.addresses()) send(sock, packet, peer, 50002)

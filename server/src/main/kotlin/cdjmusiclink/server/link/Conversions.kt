@@ -17,6 +17,12 @@ import org.deepsymmetry.beatlink.data.WaveformPreview
 
 private const val DETAIL_FRAMES_PER_SECOND = 150
 
+/** Blank (empty or whitespace-only) strings mean "not known" and map to null. */
+fun String?.blankToNull(): String? = this?.takeIf { it.isNotBlank() }
+
+/** 0 means "unknown" for duration and year in rekordbox exports. */
+fun Int.zeroToNull(): Int? = takeIf { it != 0 }
+
 fun colorHex(c: java.awt.Color): String = "#%02x%02x%02x".format(c.red, c.green, c.blue)
 
 private fun WaveformStyle.dtoName(): String = when (this) {
@@ -74,20 +80,20 @@ fun TrackMetadata.toTrack(ref: DataReference, artwork: Boolean, waveform: Boolea
         sourcePlayer = ref.player,
         slot = slotOf(ref.slot),
         type = trackTypeOf(trackType),
-        title = getTitle(),
-        artist = getArtist()?.label,
-        album = getAlbum()?.label,
-        key = getKey()?.label,
-        genre = getGenre()?.label,
-        label = getLabel()?.label,
-        remixer = getRemixer()?.label,
-        originalArtist = getOriginalArtist()?.label,
-        comment = getComment(),
-        durationSec = getDuration(),
+        title = getTitle().blankToNull(),
+        artist = getArtist()?.label.blankToNull(),
+        album = getAlbum()?.label.blankToNull(),
+        key = getKey()?.label.blankToNull(),
+        genre = getGenre()?.label.blankToNull(),
+        label = getLabel()?.label.blankToNull(),
+        remixer = getRemixer()?.label.blankToNull(),
+        originalArtist = getOriginalArtist()?.label.blankToNull(),
+        comment = getComment().blankToNull(),
+        durationSec = getDuration().zeroToNull(),
         startingBpm = getTempo().takeIf { it != 0 }?.let { it / 100.0 },
         rating = getRating(),
-        year = getYear(),
-        dateAdded = getDateAdded(),
+        year = getYear().zeroToNull(),
+        dateAdded = getDateAdded().blankToNull(),
         color = if (itemColor != null && awtColor != null) Color(itemColor.colorName, colorHex(awtColor)) else null,
         artworkAvailable = artwork,
         waveformAvailable = waveform,

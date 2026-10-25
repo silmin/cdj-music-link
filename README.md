@@ -19,6 +19,18 @@ curl -N localhost:17080/v1/stream
 open http://localhost:17080/docs
 ```
 
+### 曲名まで出す(模擬 USB)
+
+手元の rekordbox USB を `media`(device 4、[prolink](https://github.com/usr-ein/prolink) の `prolink serve`)として DJ Link に出すと、`fake-cdj-1` のロード曲に曲名・アートワーク・波形・ビートグリッドが付く。USB の `.PIONEER/` は隠しフォルダで、compose はこれを `PIONEER` としても見せるようにマウントする。手順と注意は [`deploy/media/README.md`](deploy/media/README.md)。
+
+```sh
+cp deploy/media/.env.example deploy/media/.env      # MEDIA_ROOT と MEDIA_TRACK_ID を編集
+docker compose -f deploy/compose.emu.yaml --env-file deploy/media/.env --profile media up --build
+curl -s localhost:17080/v1/players/1 | jq .track.title
+```
+
+`media` イメージは GPL-3.0 の prolink を含むため、手元の模擬環境専用で、GHCR には上げない。
+
 ## API
 
 ベースパスは `/v1`。時刻は epoch ミリ秒。詳細は `/docs`。
@@ -77,6 +89,7 @@ open http://localhost:17080/docs
 ```sh
 ./gradlew test               # ユニット・契約テスト
 scripts/emu-test.sh          # 模擬環境での結合テスト(Docker、jq が必要)
+EMU_MEDIA=1 MEDIA_TRACK_ID=308 scripts/emu-test.sh  # 模擬 USB を足してメタデータ経路も確認
 scripts/dev-setup-macos.sh   # macOS での開発セットアップ
 ```
 
@@ -98,5 +111,7 @@ MIT(`LICENSE`)。ただし次の 2 つは Eclipse Public License 2.0(本文は `
 
 - `fake-cdj/src/main/kotlin/cdjmusiclink/fakecdj/Packets.kt`: パケットのバイト列テンプレートを beat-link の VirtualCdj から写しているため、このファイル全体を EPL-2.0 で配布する
 - `server/src/test/resources/fixtures/sample1/`: Beat Link Trigger 同梱のサンプル曲データ(テスト専用)
+
+`deploy/media/Dockerfile` がビルドする prolink は GPL-3.0-only。リポジトリには Dockerfile だけを置き、イメージは配布しない。
 
 依存ライブラリ(beat-link / crate-digger / electro は EPL-2.0、Ktor / kotlinx / sqlite-jdbc / swagger-ui は Apache-2.0、slf4j / kaitai は MIT)の一覧は `NOTICE` にある。

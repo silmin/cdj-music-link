@@ -2,7 +2,7 @@ package cdjmusiclink.fakecdj
 
 fun main() {
     val config = FakeConfig.fromEnv(System.getenv())
-    val deck = Deck(config.bpm, config.trackId, config.slot, config.trackType)
+    val deck = Deck(config.bpm, config.trackId, config.slot, config.trackType, config.number, config.sourcePlayer)
     if (config.autoplay) deck.play(System.currentTimeMillis())
     val peers = Peers(selfAddresses = Peers.localAddresses())
     val fake = FakeCdj(config, deck, peers)

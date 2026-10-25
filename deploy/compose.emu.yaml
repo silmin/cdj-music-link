@@ -15,7 +15,10 @@ services:
       FAKE_NUMBER: "1"
       FAKE_BPM: "128"
       FAKE_AUTOPLAY: "true"
-      FAKE_TRACK_ID: "101"
+      # With the media profile: MEDIA_TRACK_ID is a rekordbox id on the USB,
+      # MEDIA_DEVICE=4 makes the track come from the media device. Blank keeps the old behaviour.
+      FAKE_TRACK_ID: "${MEDIA_TRACK_ID:-101}"
+      FAKE_SOURCE_PLAYER: "${MEDIA_DEVICE:-}"
     ports:
       - "17091:17090"
 
@@ -43,5 +46,26 @@ services:
     ports:
       - "17080:17080"
     depends_on:
-      - fake-cdj-1
-      - fake-cdj-2
+      fake-cdj-1:
+        condition: service_started
+      fake-cdj-2:
+        condition: service_started
+      # Start media (device 4) before the server so the server does not claim 4 first.
+      media:
+        condition: service_started
+        required: false
+
+  # Emulated rekordbox USB (prolink serve, GPL-3.0, local only). See deploy/media/README.md.
+  media:
+    profiles: [media]
+    build:
+      context: media
+    image: cdj-music-link-media:dev
+    networks: [djlink]
+    # prolink finds the medium by PIONEER/rekordbox/export.pdb, but rekordbox writes the
+    # analysis paths in export.pdb as /.PIONEER/USBANLZ/..., so the folder is mounted twice.
+    volumes:
+      - "${MEDIA_ROOT:-/Volumes/nordblue2}/.PIONEER:/media/PIONEER:ro"
+      - "${MEDIA_ROOT:-/Volumes/nordblue2}/.PIONEER:/media/.PIONEER:ro"
+      - "${MEDIA_ROOT:-/Volumes/nordblue2}/Contents:/media/Contents:ro"
+    command: ["serve", "--usb", "/media", "--number", "4", "--interface", "eth0", "-v"]

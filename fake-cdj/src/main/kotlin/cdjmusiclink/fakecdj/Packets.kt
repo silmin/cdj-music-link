@@ -26,6 +26,8 @@ data class StatusParams(
     val trackType: Int,
     val packetCounter: Int,
     val syncCounter: Int,
+    /** Player the track was loaded from (status offset 0x28); defaults to this device. Written as 0 when unloaded. */
+    val sourcePlayer: Int = number,
 )
 
 /**
@@ -140,7 +142,7 @@ object Packets {
         b[ST_NUMBER_B] = number
         b[ST_PLAYING] = flag(p.playing)
         val loaded = p.trackLoaded
-        b[ST_SOURCE_PLAYER] = if (loaded) number else 0
+        b[ST_SOURCE_PLAYER] = if (loaded) p.sourcePlayer.toByte() else 0
         b[ST_SLOT] = if (loaded) p.slot.toByte() else 0
         b[ST_TRACK_TYPE] = if (loaded) p.trackType.toByte() else 0
         putInt(b, ST_TRACK_ID, if (loaded) p.trackId else 0)

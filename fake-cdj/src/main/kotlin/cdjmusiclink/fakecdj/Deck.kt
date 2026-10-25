@@ -17,6 +17,7 @@ data class DeckState(
     val trackLoaded: Boolean,
     val slot: Int,
     val trackType: Int,
+    val sourcePlayer: Int,
 ) {
     val bpmX100: Int get() = (bpm * 100).roundToInt()
     val beatIntervalMs: Int get() = (60000.0 / bpm).roundToInt()
@@ -26,7 +27,7 @@ data class DeckState(
  * Simulated CDJ deck. Time is injected (`nowMs`) so the beat clock is deterministic. Pitch is fixed neutral, so the
  * beat interval is `60000 / bpm`. All methods are synchronized on the instance.
  */
-class Deck(bpm: Double, trackId: Int, slot: Int, trackType: Int) {
+class Deck(bpm: Double, trackId: Int, slot: Int, trackType: Int, val number: Int, sourcePlayer: Int? = null) {
     var playing = false
         private set
     var master = false
@@ -45,6 +46,8 @@ class Deck(bpm: Double, trackId: Int, slot: Int, trackType: Int) {
     var slot = slot
         private set
     var trackType = trackType
+        private set
+    var sourcePlayer = sourcePlayer ?: number
         private set
     var trackLoaded = true
         private set
@@ -115,10 +118,11 @@ class Deck(bpm: Double, trackId: Int, slot: Int, trackType: Int) {
 
     /** Loads a track: back to beat 1, `playing` unchanged. */
     @Synchronized
-    fun load(trackId: Int, slot: Int, trackType: Int) {
+    fun load(trackId: Int, slot: Int, trackType: Int, sourcePlayer: Int? = null) {
         this.trackId = trackId
         this.slot = slot
         this.trackType = trackType
+        this.sourcePlayer = sourcePlayer ?: number
         trackLoaded = true
         beatNumber = 1
         anchorBeat = 1
@@ -134,6 +138,6 @@ class Deck(bpm: Double, trackId: Int, slot: Int, trackType: Int) {
     @Synchronized
     fun snapshot(nowMs: Long): DeckState {
         advance(nowMs)
-        return DeckState(playing, master, synced, onAir, bpm, beatNumber, beatWithinBar, trackId, trackLoaded, slot, trackType)
+        return DeckState(playing, master, synced, onAir, bpm, beatNumber, beatWithinBar, trackId, trackLoaded, slot, trackType, sourcePlayer)
     }
 }

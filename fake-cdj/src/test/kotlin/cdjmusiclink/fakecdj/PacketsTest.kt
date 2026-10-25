@@ -22,11 +22,12 @@ class PacketsTest {
         master: Boolean = true,
         onAir: Boolean = true,
         trackLoaded: Boolean = true,
+        sourcePlayer: Int? = null,
     ) = StatusParams(
         name = "fake-cdj-1", number = 1, playing = playing, master = master, synced = false, onAir = onAir,
         bpmX100 = 12800, beatNumber = 100, beatWithinBar = 3, trackId = 42, trackLoaded = trackLoaded,
         slot = 3, trackType = 1, packetCounter = 7, syncCounter = 0,
-    )
+    ).let { if (sourcePlayer != null) it.copy(sourcePlayer = sourcePlayer) else it }
 
     @Test
     fun keepAliveParsesNameAndNumber() {
@@ -50,6 +51,18 @@ class PacketsTest {
         assertEquals(CdjStatus.TrackSourceSlot.USB_SLOT, s.trackSourceSlot)
         assertEquals(CdjStatus.TrackType.REKORDBOX, s.trackType)
         assertEquals(128.0, s.effectiveTempo, 0.001)
+    }
+
+    @Test
+    fun statusCarriesSourcePlayer() {
+        val s = CdjStatus(datagram(Packets.status(params(sourcePlayer = 4)), 50002))
+        assertEquals(4, s.trackSourcePlayer)
+    }
+
+    @Test
+    fun statusSourcePlayerDefaultsToOwnNumber() {
+        val s = CdjStatus(datagram(Packets.status(params()), 50002))
+        assertEquals(1, s.trackSourcePlayer)
     }
 
     @Test

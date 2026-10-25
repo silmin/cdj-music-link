@@ -5,3 +5,4 @@ build/
 .kotlin/
 .superpowers/
 deploy/.env
+deploy/media/.env

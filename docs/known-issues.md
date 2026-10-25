@@ -23,3 +23,10 @@ Task 10: review clean (deliverables); minor (deferred): Dockerfiles COPY . . bef
 
 ## CI の非推奨警告(2026-10-24 の初回 run)
 - `actions/setup-java@v4` は非推奨(最新 v6)、`actions/checkout@v4` 等は Node 20 対象で Node 24 強制実行の警告。動作に影響なし。使っている action はいずれも 1〜3 メジャー遅れ(checkout v7、gradle/actions v6、docker 系 v4/v7)なので、入力名の変更を確認してからまとめて上げる
+
+## 模擬環境(media プロファイル)で後回しにした点(2026-10-25)
+- emu-test は `/v1/players/1/artwork` を検証していない(README の記述は「経路がある」の意味で、確認済みではない)
+- prolink 0.5.0 はカラー波形の解析タグ要求に未対応のため、模擬では青いモノクロ波形(450 列)しか取れない。カラー波形(1200 列)は実機で確認
+- server(自動で 3)と media(`--number 4`)の番号取得は原理的に競合しうる。観測した全回で server=3、media=4 だったが、`depends_on` は起動順の目安に過ぎない
+- Conversions の `blankToNull` / `zeroToNull` が public の拡張関数(internal で足りる)。`toTrack` 本体は TrackMetadata を組めないため未テストのまま
+- Task A: Control の `/state` と FakeCdj のパケットはまだ `config.number` を読む(Deck.number と常に一致)。sourcePlayer 省略時の `/load` を番号 1 以外のデッキで検証するテストがない

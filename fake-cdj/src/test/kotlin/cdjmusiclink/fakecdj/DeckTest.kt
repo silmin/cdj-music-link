@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 
 class DeckTest {
-    private fun deck(bpm: Double = 128.0) = Deck(bpm, trackId = 101, slot = 3, trackType = 1)
+    private fun deck(bpm: Double = 128.0) = Deck(bpm, trackId = 101, slot = 3, trackType = 1, number = 1)
 
     @Test
     fun advanceCountsBeatsAt128() {
@@ -56,5 +56,16 @@ class DeckTest {
         d.unload()
         assertFalse(d.trackLoaded)
         assertFalse(d.playing)
+    }
+
+    @Test
+    fun loadSetsSourcePlayer() {
+        val d = Deck(128.0, trackId = 101, slot = 3, trackType = 1, number = 2)
+        assertEquals(2, d.sourcePlayer)
+        d.load(7, 3, 1, sourcePlayer = 4)
+        assertEquals(4, d.sourcePlayer)
+        assertEquals(4, d.snapshot(0).sourcePlayer)
+        d.load(8, 3, 1)
+        assertEquals(2, d.sourcePlayer)
     }
 }

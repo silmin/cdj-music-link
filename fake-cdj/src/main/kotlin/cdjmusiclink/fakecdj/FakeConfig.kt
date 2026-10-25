@@ -10,6 +10,8 @@ data class FakeConfig(
     val autoplay: Boolean,
     val iface: String?,
     val controlPort: Int = 17090,
+    /** Player the loaded track comes from; null means this device's own number. */
+    val sourcePlayer: Int? = null,
 ) {
     companion object {
         fun fromEnv(env: Map<String, String>): FakeConfig {
@@ -24,6 +26,7 @@ data class FakeConfig(
                 autoplay = env["FAKE_AUTOPLAY"]?.lowercase() in setOf("true", "1", "yes"),
                 iface = env["FAKE_IFACE"]?.takeIf { it.isNotBlank() },
                 controlPort = env["FAKE_CONTROL_PORT"]?.toInt() ?: 17090,
+                sourcePlayer = env["FAKE_SOURCE_PLAYER"]?.takeIf { it.isNotBlank() }?.toInt(),
             )
         }
     }

@@ -11,7 +11,7 @@ import kotlinx.serialization.json.put
 import java.net.InetSocketAddress
 
 @Serializable private data class TempoBody(val bpm: Double)
-@Serializable private data class LoadBody(val trackId: Int, val slot: Int, val trackType: Int)
+@Serializable private data class LoadBody(val trackId: Int, val slot: Int, val trackType: Int, val sourcePlayer: Int? = null)
 @Serializable private data class MasterBody(val master: Boolean)
 @Serializable private data class OnAirBody(val onAir: Boolean)
 
@@ -48,7 +48,7 @@ class Control(
                     "POST /pause" -> deck.pause(now)
                     "POST /unload" -> deck.unload()
                     "POST /tempo" -> deck.setTempo(json.decodeFromString<TempoBody>(body).bpm, now)
-                    "POST /load" -> json.decodeFromString<LoadBody>(body).let { deck.load(it.trackId, it.slot, it.trackType) }
+                    "POST /load" -> json.decodeFromString<LoadBody>(body).let { deck.load(it.trackId, it.slot, it.trackType, it.sourcePlayer) }
                     "POST /master" -> deck.master = json.decodeFromString<MasterBody>(body).master
                     "POST /onair" -> deck.onAir = json.decodeFromString<OnAirBody>(body).onAir
                     else -> return reply(ex, 404, """{"error":"not found"}""")
@@ -77,6 +77,7 @@ class Control(
             put("trackLoaded", st.trackLoaded)
             put("slot", st.slot)
             put("trackType", st.trackType)
+            put("sourcePlayer", st.sourcePlayer)
             put("peers", JsonArray(peers.addresses().map { it.hostAddress }.sorted().map { JsonPrimitive(it) }))
         }.toString()
     }

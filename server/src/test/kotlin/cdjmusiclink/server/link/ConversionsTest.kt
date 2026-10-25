@@ -72,4 +72,20 @@ class ConversionsTest {
     fun colorHexFormatsRed() {
         assertEquals("#ff0000", colorHex(Color(255, 0, 0)))
     }
+
+    @Test
+    fun blankToNullMapsEmptyAndWhitespace() {
+        assertEquals(null, null.blankToNull())
+        assertEquals(null, "".blankToNull())
+        assertEquals(null, "  \t\n".blankToNull())
+        assertEquals("a", "a".blankToNull())
+        assertEquals(" a ", " a ".blankToNull())
+    }
+
+    @Test
+    fun zeroToNullMapsZeroOnly() {
+        assertEquals(null, 0.zeroToNull())
+        assertEquals(1, 1.zeroToNull())
+        assertEquals(-1, (-1).zeroToNull())
+    }
 }
