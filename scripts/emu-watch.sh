@@ -180,6 +180,11 @@ track_ids() {
   else
     ids=$(seq 101 110)
   fi
+  # Shuffle so a long run walks the whole library in a different order each time
+  # (EMU_SHUFFLE=0 keeps export order). macOS has no shuf, hence awk+sort.
+  if [[ "${EMU_SHUFFLE:-1}" == "1" ]]; then
+    ids=$(printf '%s\n' "$ids" | awk 'BEGIN{srand()}{printf "%f\t%s\n", rand(), $0}' | sort -n | cut -f2)
+  fi
   printf '%s\n' "$ids"
 }
 
