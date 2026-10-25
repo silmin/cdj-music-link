@@ -26,10 +26,12 @@
 - [ ] 再生位置(補間値)が実機の表示と大きくずれない
 - [ ] SSE `/v1/stream` の `beat` 間隔が BPM と合う(128 BPM で約 468 ms)
 
-## ミキサー
+## ミキサー(会場は Allen & Heath Xone:92 = Pro DJ Link 非対応・USB なし)
 
-- [ ] ミキサー接続時、`isOnAir` が null でなく、フェーダー操作で切り替わる
-- [ ] ミキサーなしの構成で `isOnAir` が null、`/v1/now-playing` が再生中のプレイヤーを返す
+- [ ] `isOnAir` が常に null であること(Xone:92 は on-air を流さない。MIDI もチャンネルフェーダーは送らない)
+- [ ] `/v1/now-playing` がフォールバック規則で動くこと: 2 台とも再生中の区間はテンポマスター側、マスターがいなければ番号の小さい方
+- [ ] CDJ 同士の SYNC / MASTER がミキサーなしで機能し、`isTempoMaster` が切り替わること
+- [ ] (別の会場で Pro DJ Link 対応 DJM に繋ぐ機会があれば)`isOnAir` が null でなくフェーダー操作で切り替わること
 
 ## 切断と復帰
 
