@@ -2,6 +2,19 @@
 
 cdj-music-link の HTTP API だけを見る端末 UI。サーバが模擬環境でも Raspberry Pi でも、同じように使える。
 
+## 入手
+
+[GitHub Releases](https://github.com/silmin/cdj-music-link/releases) に linux(arm64 / amd64)と macOS(arm64 / amd64)のバイナリがある。
+Raspberry Pi(64bit OS)は `linux_arm64`。
+
+```sh
+tar xzf cdj-tui_<version>_linux_arm64.tar.gz
+./cdj-tui_<version>_linux_arm64/cdj-tui --base http://localhost:17080
+./cdj-tui --version
+```
+
+macOS では未署名のため、初回は `xattr -d com.apple.quarantine cdj-tui` が要ることがある。
+
 ## ビルドと起動
 
 ```sh

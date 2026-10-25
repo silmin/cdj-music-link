@@ -12,17 +12,25 @@ import (
 	"github.com/silmin/cdj-music-link/tui/internal/ui"
 )
 
+// version is set by the release workflow via -ldflags "-X main.version=...".
+var version = "dev"
+
 func main() {
 	def := os.Getenv("CDJ_BASE")
 	if def == "" {
 		def = "http://localhost:17080"
 	}
 	base := flag.String("base", def, "cdj-music-link base URL (env CDJ_BASE)")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "usage: cdj-tui [--base URL]\n\nkeys: q quit, b beat blink, w waveform rows\n\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("cdj-tui", version)
+		return
+	}
 
 	c := api.NewClient(*base)
 	snap, err := c.Snapshot()
