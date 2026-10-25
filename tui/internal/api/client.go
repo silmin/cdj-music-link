@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -26,8 +27,17 @@ func NewClient(base string) *Client {
 	return &Client{
 		Base:       strings.TrimRight(base, "/"),
 		HTTP:       &http.Client{Timeout: 5 * time.Second},
-		StreamHTTP: &http.Client{},
+		StreamHTTP: &http.Client{Transport: streamTransport()},
 	}
+}
+
+// streamTransport sends TCP keep-alives every 15 s so a dead peer is noticed
+// by the kernel, and bounds the wait for response headers.
+func streamTransport() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 15 * time.Second}).DialContext
+	t.ResponseHeaderTimeout = 10 * time.Second
+	return t
 }
 
 // StatusError is a non-2xx response. Message is the body's "error" field if any.
