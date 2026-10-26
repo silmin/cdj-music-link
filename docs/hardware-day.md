@@ -7,8 +7,8 @@
 
 - [ ] Pi: `deploy/pi-setup.md` の 1〜5 を済ませ、`scripts/live.sh` を一度通して(pull 済みにして)おく。会場では `LIVE_NO_PULL=1 scripts/live.sh`
 - [ ] Pi: `deploy/.env` は `DEVICE_NUMBER=` 空(自動)。eth0 は DHCP → link-local フォールバック、wlan0 は API 用
-- [ ] PC: `cd tui && go build ./cmd/cdj-tui` 済み。`curl`、`tcpdump` が使える
-- [ ] Pi 上でも TUI を見るなら、PC で `cd tui && GOOS=linux GOARCH=arm64 go build -o cdj-tui-arm64 ./cmd/cdj-tui` して Pi に scp(Pi に Go は入れない。64bit OS 前提)
+- [ ] PC: [Releases](https://github.com/silmin/cdj-music-link/releases) から自分の OS の `cdj-tui` を落として展開し、`./cdj-tui --version` が通る(macOS で止められたら `xattr -d com.apple.quarantine cdj-tui`)。`curl`、`tcpdump` が使える
+- [ ] Pi: 同じ Release の `linux_arm64` を Pi で落として展開しておく(`curl -LO`、Go は不要。64bit OS 前提)。`./cdj-tui --version` が通る
 - [ ] 持ち物: rekordbox 書き出し済み USB(解析済み曲入り)、CD か未解析曲(dbserver 経路用)、LAN ケーブル ×3、USB ケーブル(PC DJ 実験用)
 
 ## 配線
