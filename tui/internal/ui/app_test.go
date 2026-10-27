@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/silmin/cdj-music-link/tui/internal/api"
 	"github.com/silmin/cdj-music-link/tui/internal/model"
 )
 
@@ -250,5 +251,53 @@ func TestKeys(t *testing.T) {
 		if _, ok := cmd().(tea.QuitMsg); !ok || !cancelled {
 			t.Fatalf("%s: quit=%v cancelled=%v", k, ok, cancelled)
 		}
+	}
+}
+
+func TestWaveformRetriedAfterTransientError(t *testing.T) {
+	f := &fakeClient{waveCalls: map[int]int{}, waveErr: errors.New("timeout")}
+	m := newTestModel(f, player(1, 10, true, true))
+	open(m)
+	for _, w := range waveMsgs(tea.Batch(m.syncWaves()...)) {
+		m.Update(w)
+	}
+	if f.waveCalls[1] != 1 || m.waves[1].preview != nil {
+		t.Fatalf("first attempt: calls %d", f.waveCalls[1])
+	}
+	// a tick before the backoff elapses does nothing
+	_, cmd := m.Update(tickMsg(t0.Add(time.Second)))
+	for _, w := range waveMsgs(cmd) {
+		m.Update(w)
+	}
+	if f.waveCalls[1] != 1 {
+		t.Fatalf("retried too early: calls %d", f.waveCalls[1])
+	}
+	// after the backoff the fetch is retried and succeeds
+	f.waveErr = nil
+	_, cmd = m.Update(tickMsg(t0.Add(waveRetryBase + time.Second)))
+	for _, w := range waveMsgs(cmd) {
+		m.Update(w)
+	}
+	if f.waveCalls[1] != 2 || m.waves[1].preview == nil {
+		t.Fatalf("after backoff: calls %d preview %v", f.waveCalls[1], m.waves[1].preview)
+	}
+	if !logHas(m, "waveform 1:") {
+		t.Fatalf("no log line for the failure: %v", m.st.Log)
+	}
+}
+
+func TestWaveformNotFoundIsFinal(t *testing.T) {
+	f := &fakeClient{waveCalls: map[int]int{}, waveErr: &api.StatusError{Path: "/x", Code: 404}}
+	m := newTestModel(f, player(1, 10, true, true))
+	open(m)
+	for _, w := range waveMsgs(tea.Batch(m.syncWaves()...)) {
+		m.Update(w)
+	}
+	_, cmd := m.Update(tickMsg(t0.Add(time.Hour)))
+	for _, w := range waveMsgs(cmd) {
+		m.Update(w)
+	}
+	if f.waveCalls[1] != 1 {
+		t.Fatalf("404 retried: calls %d", f.waveCalls[1])
 	}
 }

@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -402,3 +403,26 @@ func TestTrackChangeDropsStaleBeat(t *testing.T) {
 		t.Fatal("stale beat survived unload")
 	}
 }
+
+func TestClockOffsetFromSnapshots(t *testing.T) {
+	s := NewState()
+	// GET snapshot: server clock 3 s behind the laptop
+	s.ReplaceSnapshot(Snapshot{Online: true, ServerTime: t0.Add(-3 * time.Second).UnixMilli(), At: t0})
+	if s.ClockOffset != 3*time.Second {
+		t.Fatalf("offset after ReplaceSnapshot: %v", s.ClockOffset)
+	}
+	// SSE snapshot event: server clock 5 s ahead
+	snap := `{"players":[],"master":{"player":null,"tempo":null},"devices":[],"online":true,"serverTime":` +
+		fmtInt(t0.Add(5*time.Second).UnixMilli()) + `}`
+	s.Apply(ev(t, "snapshot", snap))
+	if s.ClockOffset != -5*time.Second {
+		t.Fatalf("offset after snapshot event: %v", s.ClockOffset)
+	}
+	// a snapshot without serverTime keeps the last offset
+	s.ReplaceSnapshot(Snapshot{Online: true})
+	if s.ClockOffset != -5*time.Second {
+		t.Fatalf("offset after bare ReplaceSnapshot: %v", s.ClockOffset)
+	}
+}
+
+func fmtInt(v int64) string { return strconv.FormatInt(v, 10) }

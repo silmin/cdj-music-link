@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/silmin/cdj-music-link/tui/internal/api"
 	"github.com/silmin/cdj-music-link/tui/internal/model"
 )
 
@@ -24,6 +25,9 @@ const (
 	// quietLimit: no event at all for this long while a deck plays means the
 	// stream is dead even though TCP has not noticed.
 	quietLimit = 90 * time.Second
+	// waveform fetch retry backoff after a non-404 failure: 5 s, 10 s, … up to 60 s
+	waveRetryBase = 5 * time.Second
+	waveRetryMax  = 60 * time.Second
 )
 
 type (
@@ -62,8 +66,12 @@ type (
 )
 
 type waveEntry struct {
-	key     string // track identity; "" = no waveform wanted
-	preview *model.WaveformPreview
+	key      string // track identity; "" = no waveform wanted
+	preview  *model.WaveformPreview
+	inflight bool
+	done     bool // preview set, 404, or no waveform wanted: nothing more to fetch
+	attempts int
+	retryAt  time.Time
 }
 
 // Model is the bubbletea model. Create it with New.
@@ -168,7 +176,8 @@ func waveKey(p model.Player) string {
 }
 
 // syncWaves starts one waveform fetch per player whose track changed to one
-// with a waveform. Failures are cached as nil and not retried for that track.
+// with a waveform, and retries earlier failures once their backoff elapsed.
+// A 404 (no waveform for that track) is final.
 func (m *Model) syncWaves() []tea.Cmd {
 	var cmds []tea.Cmd
 	for n := range m.waves {
@@ -178,20 +187,46 @@ func (m *Model) syncWaves() []tea.Cmd {
 	}
 	for n, p := range m.st.Players {
 		key := waveKey(p)
-		if e, ok := m.waves[n]; ok && e.key == key {
-			continue
+		e, ok := m.waves[n]
+		if !ok || e.key != key {
+			e = waveEntry{key: key, done: key == ""}
 		}
-		m.waves[n] = waveEntry{key: key}
-		if key == "" {
-			continue
+		if !e.done && !e.inflight && !m.now.Before(e.retryAt) {
+			e.inflight = true
+			n, c := n, m.c
+			cmds = append(cmds, func() tea.Msg {
+				w, err := c.WaveformPreview(n)
+				return waveformMsg{n, key, w, err}
+			})
 		}
-		n, c := n, m.c
-		cmds = append(cmds, func() tea.Msg {
-			w, err := c.WaveformPreview(n)
-			return waveformMsg{n, key, w, err}
-		})
+		m.waves[n] = e
 	}
 	return cmds
+}
+
+func (m *Model) applyWaveform(msg waveformMsg) {
+	e, ok := m.waves[msg.player]
+	if !ok || e.key != msg.key {
+		return
+	}
+	e.inflight = false
+	switch {
+	case msg.err == nil:
+		e.preview, e.done = msg.preview, true
+	case api.IsNotFound(msg.err):
+		e.done = true
+	default:
+		e.attempts++
+		wait := waveRetryBase << (e.attempts - 1)
+		if wait > waveRetryMax || wait <= 0 {
+			wait = waveRetryMax
+		}
+		e.retryAt = m.now.Add(wait)
+		if e.attempts == 1 {
+			m.st.AddLog(m.now, fmt.Sprintf("waveform %d: %v (retrying)", msg.player, msg.err))
+		}
+	}
+	m.waves[msg.player] = e
 }
 
 func (m *Model) anyPlaying() bool {
@@ -229,7 +264,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.st.AddLog(m.now, fmt.Sprintf("link: no events for %ds while playing", int(quietLimit.Seconds())))
 			return m, tea.Batch(tick(), m.retry("link: stream lost, reconnecting…"))
 		}
-		return m, tick()
+		return m, tea.Batch(append([]tea.Cmd{tick()}, m.syncWaves()...)...)
 
 	case streamOpenedMsg:
 		if msg.gen != m.gen {
@@ -314,10 +349,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case waveformMsg:
-		if e, ok := m.waves[msg.player]; ok && e.key == msg.key && msg.err == nil {
-			e.preview = msg.preview
-			m.waves[msg.player] = e
-		}
+		m.now = m.nowFn()
+		m.applyWaveform(msg)
 		return m, nil
 	}
 	return m, nil

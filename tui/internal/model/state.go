@@ -27,6 +27,10 @@ type Snapshot struct {
 	Players      []Player
 	Master       MasterInfo
 	NowPlaying   *Player
+	// ServerTime (server ms epoch) and At (local time it was read) set
+	// State.ClockOffset; zero values leave the offset unchanged.
+	ServerTime int64
+	At         time.Time
 }
 
 // State is the client-side view of the server. Not safe for concurrent use.
@@ -39,6 +43,9 @@ type State struct {
 	NowPlaying   *Player
 	Beats        map[int]LastBeat
 	Log          []string // "HH:MM:SS  text", at most MaxLog lines
+	// ClockOffset is local − server clock, from the last snapshot's serverTime.
+	// Add it to a server timestamp (Position.UpdatedAt) to compare with local time.
+	ClockOffset time.Duration
 
 	// LogBeats also logs downbeats (beatWithinBar == 1), like emu-watch --beats.
 	LogBeats bool
@@ -59,6 +66,9 @@ func NewState() *State {
 // ReplaceSnapshot replaces everything with snap; nothing from before survives
 // (players, beats, devices, master, now-playing). It does not log.
 func (s *State) ReplaceSnapshot(snap Snapshot) {
+	if snap.ServerTime != 0 && !snap.At.IsZero() {
+		s.ClockOffset = snap.At.Sub(time.UnixMilli(snap.ServerTime))
+	}
 	s.Online = snap.Online
 	s.DeviceNumber = snap.DeviceNumber
 	s.Devices = append([]Device(nil), snap.Devices...)
@@ -129,6 +139,8 @@ func (s *State) applySnapshot(snap *SseSnapshot, at time.Time) {
 		Players:      snap.Players,
 		Master:       snap.Master,
 		NowPlaying:   np,
+		ServerTime:   snap.ServerTime,
+		At:           at,
 	})
 	for _, l := range fmtSnapshot(snap) {
 		s.AddLog(at, l)

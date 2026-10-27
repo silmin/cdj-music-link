@@ -194,7 +194,7 @@ func nowPlaying(st *model.State, o Options) string {
 	}
 
 	lb := lastBeat(st, p.Number)
-	pos := positionMs(p, lb, o.Now)
+	pos := positionMs(p, lb, o.Now, st.ClockOffset)
 	var dur *int64
 	if t != nil && t.DurationSec != nil {
 		d := int64(*t.DurationSec) * 1000
@@ -290,7 +290,7 @@ func deck(st *model.State, n int, o Options, boxW int, showWave bool) string {
 
 	var pos, dur *int64
 	if t != nil {
-		pos = positionMs(p, lastBeat(st, n), o.Now)
+		pos = positionMs(p, lastBeat(st, n), o.Now, st.ClockOffset)
 	}
 	if t != nil && t.DurationSec != nil {
 		d := int64(*t.DurationSec) * 1000

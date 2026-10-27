@@ -13,7 +13,8 @@ import (
 // last beat's position (or, without one, the player's position) by the
 // elapsed wall time scaled by the pitch. When not playing the player's own
 // position wins (a cue or seek after the last beat). nil when nothing is known.
-func positionMs(p model.Player, lb *model.LastBeat, now time.Time) *int64 {
+// offset is State.ClockOffset: Position.UpdatedAt is server time.
+func positionMs(p model.Player, lb *model.LastBeat, now time.Time, offset time.Duration) *int64 {
 	var base int64
 	var since time.Time
 	switch {
@@ -23,7 +24,7 @@ func positionMs(p model.Player, lb *model.LastBeat, now time.Time) *int64 {
 	case lb != nil && lb.PositionMs != nil:
 		base, since = *lb.PositionMs, lb.At
 	case p.Position != nil:
-		base, since = p.Position.Ms, time.UnixMilli(p.Position.UpdatedAt)
+		base, since = p.Position.Ms, time.UnixMilli(p.Position.UpdatedAt).Add(offset)
 	default:
 		return nil
 	}

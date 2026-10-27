@@ -134,6 +134,7 @@ func (c *Client) Snapshot() (model.Snapshot, error) {
 	if err != nil {
 		return s, err
 	}
+	s.ServerTime, s.At = h.ServerTime, time.Now()
 	if s.Devices, err = c.Devices(); err != nil {
 		return s, err
 	}

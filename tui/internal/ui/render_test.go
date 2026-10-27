@@ -173,24 +173,24 @@ func TestWaveRowWidth(t *testing.T) {
 func TestInterpolate(t *testing.T) {
 	p := model.Player{IsPlaying: true, Pitch: 10}
 	lb := model.LastBeat{At: t0, PositionMs: ptr(int64(10000))}
-	got := positionMs(p, &lb, t0.Add(time.Second))
+	got := positionMs(p, &lb, t0.Add(time.Second), 0)
 	if got == nil || *got != 11100 {
 		t.Fatalf("playing: %v", got)
 	}
 	p.IsPlaying = false
-	if got := positionMs(p, &lb, t0.Add(time.Second)); got == nil || *got != 10000 {
+	if got := positionMs(p, &lb, t0.Add(time.Second), 0); got == nil || *got != 10000 {
 		t.Fatalf("paused: %v", got)
 	}
 	// no beat: player position + elapsed since updatedAt
 	p = model.Player{IsPlaying: true, Position: &model.Position{Ms: 5000, UpdatedAt: t0.UnixMilli()}}
-	if got := positionMs(p, nil, t0.Add(2*time.Second)); got == nil || *got != 7000 {
+	if got := positionMs(p, nil, t0.Add(2*time.Second), 0); got == nil || *got != 7000 {
 		t.Fatalf("no beat: %v", got)
 	}
 	// beat without position falls back to player position
-	if got := positionMs(p, &model.LastBeat{At: t0}, t0); got == nil || *got != 5000 {
+	if got := positionMs(p, &model.LastBeat{At: t0}, t0, 0); got == nil || *got != 5000 {
 		t.Fatalf("beat nil pos: %v", got)
 	}
-	if got := positionMs(model.Player{}, nil, t0); got != nil {
+	if got := positionMs(model.Player{}, nil, t0, 0); got != nil {
 		t.Fatalf("nil position: %v", *got)
 	}
 }
@@ -217,12 +217,12 @@ func TestInterpolatePausedPrefersPlayerPosition(t *testing.T) {
 	// beats came while playing; then paused and cued back to 0:05
 	lb := model.LastBeat{At: t0, PositionMs: ptr(int64(90000)), BeatNumber: ptr(160)}
 	p := model.Player{IsPlaying: false, Position: &model.Position{Ms: 5000, UpdatedAt: t0.Add(time.Second).UnixMilli()}}
-	if got := positionMs(p, &lb, t0.Add(10*time.Second)); got == nil || *got != 5000 {
+	if got := positionMs(p, &lb, t0.Add(10*time.Second), 0); got == nil || *got != 5000 {
 		t.Fatalf("paused deck shows %v, want player position 5000", got)
 	}
 	// playing still uses the beat
 	p.IsPlaying = true
-	if got := positionMs(p, &lb, t0); got == nil || *got != 90000 {
+	if got := positionMs(p, &lb, t0, 0); got == nil || *got != 90000 {
 		t.Fatalf("playing: %v", got)
 	}
 }
@@ -261,4 +261,15 @@ func TestProgressLineLongClocks(t *testing.T) {
 	st.Players[1] = p
 	st.NowPlaying = &p
 	checkFits(t, Render(st, Options{Width: 80, Height: 24, Now: t0.Add(time.Hour)}), 80, 24)
+}
+
+func TestInterpolateAppliesClockOffset(t *testing.T) {
+	// Pi clock 10 s behind the laptop: updatedAt is "old" by 10 s in laptop time.
+	p := model.Player{IsPlaying: true, Position: &model.Position{Ms: 5000, UpdatedAt: t0.Add(-10 * time.Second).UnixMilli()}}
+	if got := positionMs(p, nil, t0.Add(2*time.Second), 10*time.Second); got == nil || *got != 7000 {
+		t.Fatalf("with offset: %v, want 7000", got)
+	}
+	if got := positionMs(p, nil, t0.Add(2*time.Second), 0); got == nil || *got != 17000 {
+		t.Fatalf("without offset: %v, want 17000", got)
+	}
 }
