@@ -50,4 +50,5 @@ PC DJ は rekordbox PERFORMANCE モードで CDJ を HID コントローラー�
 - [ ] `isPlaying`、`tempo`、拍イベント、`position` が追従するか
 - [ ] 2026-11-03 の実機: rekordbox の PC を LAN に繋ぐと `device` イベント `connected`(番号 17、kind collection、169.254.83.74)が出たが、1.8 秒後に `disconnected`。CDJ 側に `track` は出なかった。原因は未特定(Pi のログ待ち)
 - 模擬: `docker run --network cdj-music-link-emu_djlink -e FAKE_NUMBER=17 -e FAKE_NAME=rekordbox -e FAKE_AUTOPLAY=false cdj-music-link-fake-cdj:dev` で番号 17 の機器を足せる。server は collection として devices に出し、players からは隠し、離脱の約 10 秒後に `disconnected` を出す(server の再起動なし)。CDJ がコントロールモードで何を流すかは模擬できない
+- 一次情報(2026-11-05 調べ): AlphaTheta FAQ 8214818478105「PRO DJ LINK works when rekordbox is in EXPORT mode. (It does not work in PERFORMANCE mode.)」。CDJ-2000NXS2 取説「Using the DJ software」: [BROWSE/SEARCH] → [LINK] → [CONTROL MODE] → [USB-MIDI] で入り、「The control mode is canceled when a track is loaded in this unit.」。rekordbox 5.3 Connection Guide for PERFORMANCE mode: DJM-900NXS2 経由の CONTROL MODE(DJM-USB) で最大 4 台。djl-analysis と beat-link には、コントロールモード中の CDJ のステータスパケットについての記述なし(slot 04 collection は LINK EXPORT の話)
 - [ ] 何も出ない場合は代替を決める: Link Export(CDJ 自身で PC のライブラリを再生)か、PC 側エージェント(rekordbox の履歴、遅延あり・拍なし)
