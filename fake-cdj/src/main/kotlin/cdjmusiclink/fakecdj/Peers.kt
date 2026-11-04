@@ -12,20 +12,16 @@ import java.util.concurrent.ConcurrentHashMap
  * that address as a peer; peers silent for [staleMs] are dropped.
  */
 class Peers(
-    private val bind: InetAddress = InetAddress.getByAddress(byteArrayOf(0, 0, 0, 0)),
+    /** Socket bound to the announce port (50000); also used to send our own keep-alives from that port. */
+    val socket: DatagramSocket,
     private val selfAddresses: Set<InetAddress>,
-    private val port: Int = ANNOUNCE_PORT,
     private val staleMs: Long = 10_000,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val seen = ConcurrentHashMap<InetAddress, Long>()
-    @Volatile private var socket: DatagramSocket? = null
 
     fun start() {
-        val s = DatagramSocket(null)
-        s.reuseAddress = true
-        s.bind(InetSocketAddress(bind, port))
-        socket = s
+        val s = socket
         Thread({
             val buf = ByteArray(2048)
             while (!s.isClosed) {
@@ -41,7 +37,7 @@ class Peers(
     }
 
     fun stop() {
-        socket?.close()
+        socket.close()
     }
 
     fun addresses(): Set<InetAddress> {
@@ -52,6 +48,15 @@ class Peers(
 
     companion object {
         const val ANNOUNCE_PORT = 50000
+        const val BEAT_PORT = 50001
+        const val STATUS_PORT = 50002
+
+        /** A UDP socket bound to [port] on all interfaces, with broadcast allowed, like a real CDJ's fixed ports. */
+        fun bound(port: Int): DatagramSocket = DatagramSocket(null).apply {
+            reuseAddress = true
+            broadcast = true
+            bind(InetSocketAddress(InetAddress.getByAddress(byteArrayOf(0, 0, 0, 0)), port))
+        }
 
         /** Every address bound to a local interface, so our own broadcasts are never mistaken for peers. */
         fun localAddresses(): Set<InetAddress> =

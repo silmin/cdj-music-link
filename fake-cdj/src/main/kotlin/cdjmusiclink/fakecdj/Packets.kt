@@ -30,6 +30,16 @@ data class StatusParams(
     val sourcePlayer: Int = number,
 )
 
+/** A decoded load-track command: load [trackId] from [sourcePlayer]'s [slot] on [targetPlayer]. */
+data class LoadCommand(
+    val requester: Int,
+    val targetPlayer: Int,
+    val sourcePlayer: Int,
+    val slot: Int,
+    val trackType: Int,
+    val trackId: Int,
+)
+
 /**
  * Builders for the three UDP packet kinds a CDJ emits: keep-alive, status and beat. Pure functions, no sockets.
  *
@@ -52,6 +62,16 @@ object Packets {
     private const val KEEP_ALIVE_NAME_OFFSET = 0x0c
     private const val TYPE_STATUS: Byte = 0x0a
     private const val TYPE_BEAT: Byte = 0x28
+    private const val TYPE_LOAD_TRACK: Byte = 0x19
+
+    // load-track command (sent to port 50002 by rekordbox or a virtual CDJ; offsets per djl-analysis "Loading Tracks")
+    private const val LOAD_MIN_SIZE = 0x41
+    private const val LOAD_REQUESTER = 0x24
+    private const val LOAD_SOURCE_PLAYER = 0x28
+    private const val LOAD_SLOT = 0x29
+    private const val LOAD_TRACK_TYPE = 0x2a
+    private const val LOAD_TRACK_ID = 0x2c
+    private const val LOAD_TARGET = 0x40 // zero-based target player
 
     // keep-alive
     private const val KA_NUMBER = 0x24
@@ -194,6 +214,28 @@ object Packets {
         b[BT_BEAT_IN_BAR] = beatWithinBar.toByte()
         check(b.size == BEAT_SIZE)
         return b
+    }
+
+    /**
+     * Parses a load-track command (type 0x19) addressed to a player, or returns null for anything else.
+     * Only [length] bytes of [bytes] are valid (the datagram length).
+     */
+    fun parseLoadTrack(bytes: ByteArray, length: Int = bytes.size): LoadCommand? {
+        if (length < LOAD_MIN_SIZE) return null
+        val magic = MAGIC.toByteArray(Charsets.US_ASCII)
+        for (i in magic.indices) if (bytes[i] != magic[i]) return null
+        if (bytes[TYPE_OFFSET] != TYPE_LOAD_TRACK) return null
+        fun u8(i: Int) = bytes[i].toInt() and 0xff
+        val id = (u8(LOAD_TRACK_ID) shl 24) or (u8(LOAD_TRACK_ID + 1) shl 16) or
+            (u8(LOAD_TRACK_ID + 2) shl 8) or u8(LOAD_TRACK_ID + 3)
+        return LoadCommand(
+            requester = u8(LOAD_REQUESTER),
+            targetPlayer = u8(LOAD_TARGET) + 1,
+            sourcePlayer = u8(LOAD_SOURCE_PLAYER),
+            slot = u8(LOAD_SLOT),
+            trackType = u8(LOAD_TRACK_TYPE),
+            trackId = id,
+        )
     }
 
     private fun packet(type: Byte, name: String, payload: ByteArray): ByteArray {

@@ -110,4 +110,34 @@ class PacketsTest {
         assertEquals(listOf(0x01, 0x01, 0x01, 0x01, 0x00), at(0xd8, 0xdd))
         assertEquals(listOf(0x00, 0x15, 0x00, 0x00, 0x07, 0x61, 0x00, 0x00, 0x06, 0x2f), at(0x112, 0x11c))
     }
+
+    /** A load-track command laid out per djl-analysis "Loading Tracks": header, then D at 0x24, Dr/Sr/Tr at 0x28.., id at 0x2c, target at 0x40. */
+    private fun loadCommand(target: Int = 1, source: Int = 17, slot: Int = 4, type: Int = 1, id: Int = 0x01020304, requester: Int = 17): ByteArray {
+        val b = ByteArray(0x58)
+        "Qspt1WmJOL".toByteArray(Charsets.US_ASCII).copyInto(b)
+        b[0x0a] = 0x19
+        "rekordbox".toByteArray(Charsets.US_ASCII).copyInto(b, 0x0b)
+        b[0x1f] = 0x01; b[0x21] = requester.toByte(); b[0x23] = 0x34
+        b[0x24] = requester.toByte()
+        b[0x28] = source.toByte(); b[0x29] = slot.toByte(); b[0x2a] = type.toByte()
+        b[0x2c] = (id ushr 24).toByte(); b[0x2d] = (id ushr 16).toByte(); b[0x2e] = (id ushr 8).toByte(); b[0x2f] = id.toByte()
+        b[0x40] = (target - 1).toByte()
+        return b
+    }
+
+    @Test
+    fun parsesLoadTrackCommand() {
+        val cmd = Packets.parseLoadTrack(loadCommand(target = 2, source = 17, slot = 4, type = 1, id = 0x01020304))
+        assertEquals(LoadCommand(requester = 17, targetPlayer = 2, sourcePlayer = 17, slot = 4, trackType = 1, trackId = 0x01020304), cmd)
+    }
+
+    @Test
+    fun ignoresOtherPacketsAsLoadCommands() {
+        // a status packet, a keep-alive, a truncated command and a wrong magic are all null
+        assertEquals(null, Packets.parseLoadTrack(Packets.status(params())))
+        assertEquals(null, Packets.parseLoadTrack(Packets.keepAlive("fake-cdj-1", 1, mac, ip)))
+        assertEquals(null, Packets.parseLoadTrack(loadCommand(), length = 0x30))
+        val bad = loadCommand().also { it[0] = 'X'.code.toByte() }
+        assertEquals(null, Packets.parseLoadTrack(bad))
+    }
 }

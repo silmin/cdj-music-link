@@ -37,29 +37,31 @@ class FakeCdj(
     private val config: FakeConfig,
     private val deck: Deck,
     private val peers: Peers,
+    /** Bound to 50001; beats are broadcast from it, like a real CDJ. */
+    private val beatSocket: DatagramSocket,
+    /** Bound to 50002; status packets are sent from it (and load commands arrive on it, see [Commands]). */
+    private val statusSocket: DatagramSocket,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private var scope: CoroutineScope? = null
-    private var socket: DatagramSocket? = null
     val iface: Iface = Iface.resolve(config.iface, config.number)
 
     fun start() {
-        val sock = DatagramSocket(0).apply { broadcast = true }
-        socket = sock
         val s = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope = s
         println(
             "fake-cdj #${config.number} '${config.name}' iface=${iface.name} ip=${iface.ip.hostAddress} " +
                 "broadcast=${iface.broadcast.hostAddress}",
         )
-        s.launch { keepAliveLoop(sock) }
-        s.launch { statusLoop(sock) }
-        s.launch { beatLoop(sock) }
+        s.launch { keepAliveLoop(peers.socket) }
+        s.launch { statusLoop(statusSocket) }
+        s.launch { beatLoop(beatSocket) }
     }
 
     fun stop() {
         scope?.cancel()
-        socket?.close()
+        beatSocket.close()
+        statusSocket.close()
     }
 
     private fun send(sock: DatagramSocket, data: ByteArray, to: InetAddress, port: Int) {

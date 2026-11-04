@@ -1,0 +1,61 @@
+# Emulated CDJs on a real LAN (Linux host only, e.g. the Pi): fake-cdj x2 and the server get their own
+# addresses on the host's Ethernet via Docker macvlan, so a rekordbox laptop on the same LAN sees them as
+# players and can load tracks onto them (LINK EXPORT). Steps: deploy/emu-macvlan.md.
+#
+#   MACVLAN_PARENT   host NIC (default eth0)
+#   MACVLAN_SUBNET / MACVLAN_GATEWAY   the LAN (default 192.168.32.0/23 via 192.168.32.1)
+#   FAKE1_IP / FAKE2_IP / SERVER_IP    free addresses on that LAN (defaults 192.168.33.240-242)
+#
+# The server is also on a bridge network so the host reaches the API at localhost:17080 (macvlan
+# containers are not reachable from their own host).
+services:
+  fake-cdj-1:
+    image: ghcr.io/silmin/cdj-music-link-fake-cdj:latest
+    networks:
+      djlink:
+        ipv4_address: ${FAKE1_IP:-192.168.33.240}
+    environment:
+      FAKE_NUMBER: "1"
+      FAKE_NAME: ${FAKE_NAME:-CDJ-2000NXS2}
+      FAKE_AUTOPLAY: "false"
+      FAKE_TRACK_ID: "0"
+    restart: unless-stopped
+
+  fake-cdj-2:
+    image: ghcr.io/silmin/cdj-music-link-fake-cdj:latest
+    networks:
+      djlink:
+        ipv4_address: ${FAKE2_IP:-192.168.33.241}
+    environment:
+      FAKE_NUMBER: "2"
+      FAKE_NAME: ${FAKE_NAME:-CDJ-2000NXS2}
+      FAKE_AUTOPLAY: "false"
+      FAKE_TRACK_ID: "0"
+    restart: unless-stopped
+
+  server:
+    image: ghcr.io/silmin/cdj-music-link-server:latest
+    networks:
+      djlink:
+        ipv4_address: ${SERVER_IP:-192.168.33.242}
+      api: {}
+    ports:
+      - "17080:17080"
+    environment:
+      DEVICE_NAME: cdj-music-link
+      LOG_LEVEL: info
+    restart: unless-stopped
+    depends_on:
+      - fake-cdj-1
+      - fake-cdj-2
+
+networks:
+  djlink:
+    driver: macvlan
+    driver_opts:
+      parent: ${MACVLAN_PARENT:-eth0}
+    ipam:
+      config:
+        - subnet: ${MACVLAN_SUBNET:-192.168.32.0/23}
+          gateway: ${MACVLAN_GATEWAY:-192.168.32.1}
+  api: {}
