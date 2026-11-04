@@ -120,7 +120,7 @@ object Packets {
     )
 
     fun keepAlive(name: String, number: Int, mac: ByteArray, ip: ByteArray): ByteArray {
-        require(number in 1..15) { "device number must be 1..15: $number" }
+        require(number in 1..255) { "device number must be 1..255: $number" }
         require(mac.size == 6) { "mac must be 6 bytes" }
         require(ip.size == 4) { "ip must be 4 bytes" }
         val p = KEEP_ALIVE_TEMPLATE.copyOf()
@@ -133,7 +133,7 @@ object Packets {
     }
 
     fun status(p: StatusParams): ByteArray {
-        require(p.number in 1..15) { "device number must be 1..15: ${p.number}" }
+        require(p.number in 1..255) { "device number must be 1..255: ${p.number}" }
         require(p.beatWithinBar in 1..4) { "beatWithinBar must be 1..4: ${p.beatWithinBar}" }
         require(p.trackLoaded || !p.playing) { "cannot be playing without a loaded track" }
         val b = packet(TYPE_STATUS, p.name, STATUS_PAYLOAD)
@@ -178,7 +178,7 @@ object Packets {
         beatIntervalMs: Int,
         nextBarInMs: Int,
     ): ByteArray {
-        require(number in 1..15) { "device number must be 1..15: $number" }
+        require(number in 1..255) { "device number must be 1..255: $number" }
         require(beatWithinBar in 1..4) { "beatWithinBar must be 1..4: $beatWithinBar" }
         val b = packet(TYPE_BEAT, name, BEAT_PAYLOAD)
         b[BT_NUMBER_A] = number.toByte()

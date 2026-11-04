@@ -48,4 +48,6 @@ PC DJ は rekordbox PERFORMANCE モードで CDJ を HID コントローラー�
 - [ ] rekordbox のデッキで曲を再生したとき、その CDJ の `/v1/players/N` に `track` が出るか(`slot` が `collection`、`sourcePlayer` が rekordbox の番号になる想定)
 - [ ] `track.title` が埋まるか(rekordbox の dbserver 経路。Pi の番号が 1〜4 であること)
 - [ ] `isPlaying`、`tempo`、拍イベント、`position` が追従するか
+- [ ] 2026-11-03 の実機: rekordbox の PC を LAN に繋ぐと `device` イベント `connected`(番号 17、kind collection、169.254.83.74)が出たが、1.8 秒後に `disconnected`。CDJ 側に `track` は出なかった。原因は未特定(Pi のログ待ち)
+- 模擬: `docker run --network cdj-music-link-emu_djlink -e FAKE_NUMBER=17 -e FAKE_NAME=rekordbox -e FAKE_AUTOPLAY=false cdj-music-link-fake-cdj:dev` で番号 17 の機器を足せる。server は collection として devices に出し、players からは隠し、離脱の約 10 秒後に `disconnected` を出す(server の再起動なし)。CDJ がコントロールモードで何を流すかは模擬できない
 - [ ] 何も出ない場合は代替を決める: Link Export(CDJ 自身で PC のライブラリを再生)か、PC 側エージェント(rekordbox の履歴、遅延あり・拍なし)
