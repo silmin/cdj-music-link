@@ -9,8 +9,8 @@ import java.net.DatagramPacket
 import java.net.InetAddress
 
 class ListenersTest {
-    private fun beat(beatWithinBar: Int = 1): Beat {
-        val bytes = Packets.beat("fake-cdj-1", 1, 12800, 0x100000, beatWithinBar, 468, 1404)
+    private fun beat(beatWithinBar: Int = 1, number: Int = 1): Beat {
+        val bytes = Packets.beat("fake-cdj-1", number, 12800, 0x100000, beatWithinBar, 468, 1404)
         return Beat(DatagramPacket(bytes, bytes.size, InetAddress.getByAddress(byteArrayOf(192.toByte(), 168.toByte(), 1, 10)), 50001))
     }
 
@@ -36,5 +36,23 @@ class ListenersTest {
         assertNull(e.position)
         assertNull(e.waveform)
         assertNull(e.beatNumber)
+    }
+
+    @Test
+    fun beatWithinBarWithoutStatusTrustsPlayersOnly() {
+        // no status yet (VirtualCdj has none for the device): a CDJ's packet value is kept
+        assertEquals(3, Listeners.beatWithinBarOf(beat(3), null))
+        // a mixer / rekordbox number without status: unknown, so null
+        assertNull(Listeners.beatWithinBarOf(beat(3, number = 33), null))
+        // explicit answers from the status win either way
+        assertEquals(3, Listeners.beatWithinBarOf(beat(3, number = 33), true))
+        assertNull(Listeners.beatWithinBarOf(beat(3), false))
+    }
+
+    @Test
+    fun beatToEventWithoutStatusDoesNotThrow() {
+        // VirtualCdj is not running in tests, so the status lookup yields null rather than an NPE
+        val e = Listeners.beatEventOf(beat(2), null, null, 1L, false)
+        assertEquals(2, e.beatWithinBar)
     }
 }

@@ -101,6 +101,21 @@ object Listeners {
         type = trackTypeOf(s.trackType),
     )
 
+    /**
+     * Whether the beat's beatWithinBar is meaningful, from the latest status of the same device,
+     * or null when there is none. Beat.isBeatWithinBarMeaningful itself NPEs in that case
+     * (seen on real CDJs: 251 dropped beats in one session).
+     */
+    fun beatWithinBarMeaningful(b: Beat): Boolean? =
+        runCatching { VirtualCdj.getInstance().getLatestStatusFor(b)?.isBeatWithinBarMeaningful }.getOrNull()
+
+    /** Without a status, trust the packet for players (numbers below 0x10) and drop it for mixers/rekordbox. */
+    fun beatWithinBarOf(b: Beat, meaningful: Boolean?): Int? = when (meaningful) {
+        true -> b.beatWithinBar
+        false -> null
+        null -> if (b.deviceNumber < 0x10) b.beatWithinBar else null
+    }
+
     fun beatEventOf(
         b: Beat,
         positionMs: Long?,
@@ -108,10 +123,11 @@ object Listeners {
         now: Long,
         isTempoMaster: Boolean,
         beatNumber: Int? = null,
+        meaningful: Boolean? = beatWithinBarMeaningful(b),
     ): BeatEvent = BeatEvent(
         player = b.deviceNumber,
         beatNumber = beatNumber,
-        beatWithinBar = if (b.isBeatWithinBarMeaningful) b.beatWithinBar else null,
+        beatWithinBar = beatWithinBarOf(b, meaningful),
         tempo = b.effectiveTempo,
         nextBeatInMs = b.nextBeat.takeIf { it in 1L..MAX_INT_MS }?.toInt(),
         nextBarInMs = b.nextBar.takeIf { it in 1L..MAX_INT_MS }?.toInt(),
