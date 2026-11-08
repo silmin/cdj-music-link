@@ -20,6 +20,10 @@ services:
       FAKE_NAME: ${FAKE_NAME:-CDJ-2000NXS2}
       FAKE_AUTOPLAY: "false"
       FAKE_TRACK_ID: "0"
+      # experimental LINK handshake probe (see FakeConfig); empty = off
+      FAKE_LINK_REQUEST_TYPE: ${FAKE1_LINK_REQUEST_TYPE:-}
+      FAKE_LINK_REPLY_TYPE: ${FAKE1_LINK_REPLY_TYPE:-17}
+      FAKE_LINK_REPLY_PAYLOAD: ${FAKE1_LINK_REPLY_PAYLOAD:-}
     restart: unless-stopped
 
   fake-cdj-2:
@@ -32,6 +36,10 @@ services:
       FAKE_NAME: ${FAKE_NAME:-CDJ-2000NXS2}
       FAKE_AUTOPLAY: "false"
       FAKE_TRACK_ID: "0"
+      # experimental LINK handshake probe (see FakeConfig); empty = off
+      FAKE_LINK_REQUEST_TYPE: ${FAKE2_LINK_REQUEST_TYPE:-}
+      FAKE_LINK_REPLY_TYPE: ${FAKE2_LINK_REPLY_TYPE:-17}
+      FAKE_LINK_REPLY_PAYLOAD: ${FAKE2_LINK_REPLY_PAYLOAD:-}
     restart: unless-stopped
 
   server:
