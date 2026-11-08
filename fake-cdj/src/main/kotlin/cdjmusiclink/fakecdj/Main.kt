@@ -8,9 +8,13 @@ fun main() {
     val announce = Peers.bound(Peers.ANNOUNCE_PORT)
     val beats = Peers.bound(Peers.BEAT_PORT)
     val status = Peers.bound(Peers.STATUS_PORT)
-    val peers = Peers(announce, selfAddresses = Peers.localAddresses())
-    val commands = Commands(status, deck, config)
+    lateinit var commands: Commands
+    val peers = Peers(announce, selfAddresses = Peers.localAddresses()) { addr, number ->
+        println("rekordbox seen: device $number at ${addr.hostAddress}; linking")
+        commands.linkTo(addr, number)
+    }
     val fake = FakeCdj(config, deck, peers, beats, status)
+    commands = Commands(status, deck, config, fake.iface.ip.address)
     val control = Control(config, deck, peers)
     peers.start()
     commands.start()

@@ -225,6 +225,39 @@ object Packets {
         return b
     }
 
+    // rekordbox LINK handshake, player side (layouts from real rekordbox 7 + CDJ captures published by Slipmat)
+    private const val TYPE_HELLO: Byte = 0x10 // player -> rekordbox, 36 bytes
+    private const val TYPE_MEDIA_QUERY: Byte = 0x05 // player -> rekordbox, 48 bytes
+    private const val TYPE_LINK_PING: Byte = 0x46 // player -> rekordbox, 40 bytes
+    const val SLOT_COLLECTION = 4
+    const val KEEP_ALIVE_TYPE_OFFSET = 0x34 // 01 CDJ, 02 mixer, 04 rekordbox
+    const val DEVICE_TYPE_REKORDBOX = 0x04
+
+    /** Type 0x10: a player greets a rekordbox it has just seen. Payload `01 00 D 00 00`. */
+    fun hello(name: String, number: Int): ByteArray =
+        packet(TYPE_HELLO, name, byteArrayOf(0x01, 0x00, number.toByte(), 0x00, 0x00))
+
+    /** Type 0x05: ask [target] about the media in [slot] (4 = rekordbox collection); carries our own IPv4. */
+    fun mediaQuery(name: String, number: Int, ownIp: ByteArray, target: Int, slot: Int): ByteArray {
+        require(ownIp.size == 4) { "ip must be 4 bytes" }
+        val payload = ByteArray(5 + 12)
+        payload[0] = 0x01; payload[2] = number.toByte(); payload[4] = 0x0c
+        ownIp.copyInto(payload, 5)
+        payload[12] = target.toByte()
+        payload[16] = slot.toByte()
+        return packet(TYPE_MEDIA_QUERY, name, payload)
+    }
+
+    /** Type 0x46: the single "link ping" a player sends before browsing a rekordbox collection. */
+    fun linkPing(name: String, number: Int, slot: Int = SLOT_COLLECTION): ByteArray =
+        packet(TYPE_LINK_PING, name, byteArrayOf(0x01, 0x00, number.toByte(), 0x00, 0x04, number.toByte(), slot.toByte(), 0x00, 0xc0.toByte()))
+
+    /** Device number and device-type byte of a keep-alive (type 0x06), or null. */
+    fun parseKeepAlive(bytes: ByteArray, length: Int = bytes.size): Pair<Int, Int>? {
+        if (typeOf(bytes, length) != 0x06 || length < KEEP_ALIVE_SIZE) return null
+        return (bytes[KA_NUMBER].toInt() and 0xff) to (bytes[KEEP_ALIVE_TYPE_OFFSET].toInt() and 0xff)
+    }
+
     /** The packet type byte (offset 0x0a) when [bytes] carries the Pro DJ Link magic, else null. */
     fun typeOf(bytes: ByteArray, length: Int = bytes.size): Int? {
         if (length <= TYPE_OFFSET) return null

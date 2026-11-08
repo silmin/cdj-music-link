@@ -34,3 +34,8 @@ public analysis (https://djl-analysis.deepsymmetry.org/); no code was copied fro
 Go terminal UI (tui/, not distributed as a binary; built from source):
   github.com/charmbracelet/bubbletea, lipgloss, bubbles   Charm   MIT
   transitive: golang.org/x/sys, golang.org/x/text          Go      BSD-3-Clause; others MIT
+
+fake-cdj: the rekordbox LINK handshake packets (types 0x10, 0x05, 0x46 from a player; 0x11, 0x16, 0x47 from
+rekordbox) were laid out from wire captures of rekordbox 7 with a CDJ-3000 published as test data by the
+Slipmat project (https://github.com/yniverz/Slipmat, internal/prolink/testdata/rb7). Only the observed bytes
+were used as reference; no Slipmat source code (GPL-3.0-or-later) is included.

@@ -17,8 +17,11 @@ class Peers(
     private val selfAddresses: Set<InetAddress>,
     private val staleMs: Long = 10_000,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Called once per address when a keep-alive with the rekordbox device type (0x04) is first seen. */
+    private val onRekordbox: (InetAddress, Int) -> Unit = { _, _ -> },
 ) {
     private val seen = ConcurrentHashMap<InetAddress, Long>()
+    private val rekordboxes = ConcurrentHashMap.newKeySet<InetAddress>()
 
     fun start() {
         val s = socket
@@ -28,7 +31,12 @@ class Peers(
                 try {
                     val p = DatagramPacket(buf, buf.size)
                     s.receive(p)
-                    if (p.address !in selfAddresses) seen[p.address] = clock()
+                    if (p.address in selfAddresses) continue
+                    seen[p.address] = clock()
+                    val ka = Packets.parseKeepAlive(p.data, p.length)
+                    if (ka != null && ka.second == Packets.DEVICE_TYPE_REKORDBOX && rekordboxes.add(p.address)) {
+                        onRekordbox(p.address, ka.first)
+                    }
                 } catch (_: java.io.IOException) {
                     // closed by stop()
                 }
@@ -43,6 +51,7 @@ class Peers(
     fun addresses(): Set<InetAddress> {
         val now = clock()
         seen.entries.removeIf { now - it.value > staleMs }
+        rekordboxes.retainAll(seen.keys)
         return seen.keys.toSet()
     }
 

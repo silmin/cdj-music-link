@@ -158,4 +158,27 @@ class PacketsTest {
         val a = DeviceAnnouncement(datagram(Packets.keepAlive("CDJ-2000NXS2", 1, mac, ip), 50000))
         assertEquals("CDJ-2000NXS2", a.deviceName)
     }
+
+    private fun hex(s: String) = s.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+    @Test
+    fun linkHandshakePacketsMatchRealCaptures() {
+        // player -> rekordbox packets captured from a CDJ-3000 talking to rekordbox 7 (Slipmat testdata/rb7)
+        val hello = "5173707431576d4a4f4c1043444a2d333030300000000000000000000000000100010000"
+        val query = "5173707431576d4a4f4c0543444a2d33303030000000000000000000000000010002000cc0a801660000001100000004"
+        val ping = "5173707431576d4a4f4c4643444a2d333030300000000000000000000000000100020004020400c0"
+        assertEquals(hex(hello).toList(), Packets.hello("CDJ-3000", 1).toList())
+        val ip = byteArrayOf(192.toByte(), 168.toByte(), 1, 0x66)
+        assertEquals(hex(query).toList(), Packets.mediaQuery("CDJ-3000", 2, ip, 0x11, 4).toList())
+        assertEquals(hex(ping).toList(), Packets.linkPing("CDJ-3000", 2).toList())
+    }
+
+    @Test
+    fun recognisesRekordboxKeepAlive() {
+        // rekordbox 7 keep-alive: device 17, type byte 0x34 = 04
+        val rb = "5173707431576d4a4f4c060072656b6f7264626f780000000000000000000000010300361101bcd074683ea4c0a844370401000004" + "08"
+        assertEquals(0x11 to 0x04, Packets.parseKeepAlive(hex(rb)))
+        assertEquals(1 to 0x01, Packets.parseKeepAlive(Packets.keepAlive("CDJ-2000NXS2", 1, mac, ip)))
+        assertEquals(null, Packets.parseKeepAlive(Packets.status(params())))
+    }
 }
