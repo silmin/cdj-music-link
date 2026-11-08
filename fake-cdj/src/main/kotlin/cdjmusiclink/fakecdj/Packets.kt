@@ -216,6 +216,24 @@ object Packets {
         return b
     }
 
+    /** The packet type byte (offset 0x0a) when [bytes] carries the Pro DJ Link magic, else null. */
+    fun typeOf(bytes: ByteArray, length: Int = bytes.size): Int? {
+        if (length <= TYPE_OFFSET) return null
+        val magic = MAGIC.toByteArray(Charsets.US_ASCII)
+        for (i in magic.indices) if (bytes[i] != magic[i]) return null
+        return bytes[TYPE_OFFSET].toInt() and 0xff
+    }
+
+    /** Header + [payload] for an arbitrary [type]; [number] is written at payload offset 2 when the payload has one. */
+    fun raw(type: Int, name: String, number: Int, payload: ByteArray): ByteArray {
+        val p = payload.copyOf()
+        if (p.size > 2) p[2] = number.toByte()
+        return packet(type.toByte(), name, p)
+    }
+
+    fun hex(bytes: ByteArray, length: Int = bytes.size): String =
+        bytes.take(length).joinToString("") { "%02x".format(it) }
+
     /**
      * Parses a load-track command (type 0x19) addressed to a player, or returns null for anything else.
      * Only [length] bytes of [bytes] are valid (the datagram length).

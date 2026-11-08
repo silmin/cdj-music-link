@@ -12,6 +12,14 @@ data class FakeConfig(
     val controlPort: Int = 17090,
     /** Player the loaded track comes from; null means this device's own number. */
     val sourcePlayer: Int? = null,
+    /**
+     * Experimental: when a packet of type [linkRequestType] arrives on 50002, reply to the sender with a packet of
+     * type [linkReplyType] whose payload (after the 0x1f header) is [linkReplyPayload] with our device number
+     * written at payload offset 2. Used to probe rekordbox 7's undocumented LINK EXPORT handshake (type 0x16).
+     */
+    val linkRequestType: Int? = null,
+    val linkReplyType: Int = 0x17,
+    val linkReplyPayload: ByteArray = byteArrayOf(),
 ) {
     companion object {
         fun fromEnv(env: Map<String, String>): FakeConfig {
@@ -27,6 +35,10 @@ data class FakeConfig(
                 iface = env["FAKE_IFACE"]?.takeIf { it.isNotBlank() },
                 controlPort = env["FAKE_CONTROL_PORT"]?.toInt() ?: 17090,
                 sourcePlayer = env["FAKE_SOURCE_PLAYER"]?.takeIf { it.isNotBlank() }?.toInt(),
+                linkRequestType = env["FAKE_LINK_REQUEST_TYPE"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16),
+                linkReplyType = env["FAKE_LINK_REPLY_TYPE"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16) ?: 0x17,
+                linkReplyPayload = env["FAKE_LINK_REPLY_PAYLOAD"]?.filter { !it.isWhitespace() }?.takeIf { it.isNotEmpty() }
+                    ?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray() ?: byteArrayOf(),
             )
         }
     }

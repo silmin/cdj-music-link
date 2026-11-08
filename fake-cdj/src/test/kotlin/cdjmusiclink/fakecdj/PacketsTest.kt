@@ -140,4 +140,13 @@ class PacketsTest {
         val bad = loadCommand().also { it[0] = 'X'.code.toByte() }
         assertEquals(null, Packets.parseLoadTrack(bad))
     }
+
+    @Test
+    fun rawPacketCarriesTypeNameAndNumber() {
+        val b = Packets.raw(0x17, "fake-cdj-1", 2, byteArrayOf(0x01, 0x01, 0x00, 0x00, 0x00))
+        assertEquals(0x17, Packets.typeOf(b))
+        assertEquals(0x1f + 5, b.size)
+        assertEquals(2, b[0x21].toInt())
+        assertEquals(null, Packets.typeOf("not a dj link packet".toByteArray()))
+    }
 }

@@ -9,7 +9,7 @@ fun main() {
     val beats = Peers.bound(Peers.BEAT_PORT)
     val status = Peers.bound(Peers.STATUS_PORT)
     val peers = Peers(announce, selfAddresses = Peers.localAddresses())
-    val commands = Commands(status, deck, config.number)
+    val commands = Commands(status, deck, config)
     val fake = FakeCdj(config, deck, peers, beats, status)
     val control = Control(config, deck, peers)
     peers.start()
