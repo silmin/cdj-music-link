@@ -8,6 +8,7 @@
 #
 # The server is also on a bridge network so the host reaches the API at localhost:17080 (macvlan
 # containers are not reachable from their own host).
+name: cdj-emu-macvlan
 services:
   fake-cdj-1:
     image: ghcr.io/silmin/cdj-music-link-fake-cdj:latest
