@@ -17,6 +17,8 @@ data class FakeConfig(
      * type [linkReplyType] whose payload (after the 0x1f header) is [linkReplyPayload] with our device number
      * written at payload offset 2. Used to probe rekordbox 7's undocumented LINK EXPORT handshake (type 0x16).
      */
+    /** Keep-alive byte 0x35 (see Packets.keepAlive); env FAKE_KA_MODEL as hex. */
+    val keepAliveModel: Int = Packets.KA_MODEL_CDJ2000,
     val linkRequestType: Int? = null,
     val linkReplyType: Int = 0x17,
     val linkReplyPayload: ByteArray = byteArrayOf(),
@@ -35,6 +37,7 @@ data class FakeConfig(
                 iface = env["FAKE_IFACE"]?.takeIf { it.isNotBlank() },
                 controlPort = env["FAKE_CONTROL_PORT"]?.toInt() ?: 17090,
                 sourcePlayer = env["FAKE_SOURCE_PLAYER"]?.takeIf { it.isNotBlank() }?.toInt(),
+                keepAliveModel = env["FAKE_KA_MODEL"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16) ?: Packets.KA_MODEL_CDJ2000,
                 linkRequestType = env["FAKE_LINK_REQUEST_TYPE"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16),
                 linkReplyType = env["FAKE_LINK_REPLY_TYPE"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16) ?: 0x17,
                 linkReplyPayload = env["FAKE_LINK_REPLY_PAYLOAD"]?.filter { !it.isWhitespace() }?.takeIf { it.isNotEmpty() }

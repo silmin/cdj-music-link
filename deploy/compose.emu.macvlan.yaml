@@ -21,6 +21,7 @@ services:
       FAKE_AUTOPLAY: "false"
       FAKE_TRACK_ID: "0"
       # experimental LINK handshake probe (see FakeConfig); empty = off
+      FAKE_KA_MODEL: ${FAKE1_KA_MODEL:-00}
       FAKE_LINK_REQUEST_TYPE: ${FAKE1_LINK_REQUEST_TYPE:-}
       FAKE_LINK_REPLY_TYPE: ${FAKE1_LINK_REPLY_TYPE:-17}
       FAKE_LINK_REPLY_PAYLOAD: ${FAKE1_LINK_REPLY_PAYLOAD:-}
@@ -37,6 +38,7 @@ services:
       FAKE_AUTOPLAY: "false"
       FAKE_TRACK_ID: "0"
       # experimental LINK handshake probe (see FakeConfig); empty = off
+      FAKE_KA_MODEL: ${FAKE2_KA_MODEL:-00}
       FAKE_LINK_REQUEST_TYPE: ${FAKE2_LINK_REQUEST_TYPE:-}
       FAKE_LINK_REPLY_TYPE: ${FAKE2_LINK_REPLY_TYPE:-17}
       FAKE_LINK_REPLY_PAYLOAD: ${FAKE2_LINK_REPLY_PAYLOAD:-}

@@ -149,4 +149,13 @@ class PacketsTest {
         assertEquals(2, b[0x21].toInt())
         assertEquals(null, Packets.typeOf("not a dj link packet".toByteArray()))
     }
+
+    @Test
+    fun keepAliveModelByte() {
+        assertEquals(0x00, Packets.keepAlive("CDJ-2000NXS2", 1, mac, ip)[0x35].toInt())
+        assertEquals(0x64, Packets.keepAlive("CDJ-3000", 1, mac, ip, Packets.KA_MODEL_CDJ3000)[0x35].toInt())
+        // still a valid announcement for beat-link
+        val a = DeviceAnnouncement(datagram(Packets.keepAlive("CDJ-2000NXS2", 1, mac, ip), 50000))
+        assertEquals("CDJ-2000NXS2", a.deviceName)
+    }
 }

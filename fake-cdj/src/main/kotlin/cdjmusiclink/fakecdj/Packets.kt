@@ -77,6 +77,9 @@ object Packets {
     private const val KA_NUMBER = 0x24
     private const val KA_MAC = 0x26
     private const val KA_IP = 0x2c
+    private const val KA_MODEL = 0x35
+    const val KA_MODEL_CDJ2000 = 0x00
+    const val KA_MODEL_CDJ3000 = 0x64
 
     // status
     private const val ST_NUMBER_A = 0x21
@@ -139,15 +142,21 @@ object Packets {
             "ffffffffff00100000000000000b00000d",
     )
 
-    fun keepAlive(name: String, number: Int, mac: ByteArray, ip: ByteArray): ByteArray {
+    /**
+     * [model] is the last byte (0x35): djl-analysis shows `00` for CDJ-2000-class players and `64` for the
+     * CDJ-3000 (beat-link's template, which we copied, uses `64`). Default `00` to match the CDJ-2000NXS2 name.
+     */
+    fun keepAlive(name: String, number: Int, mac: ByteArray, ip: ByteArray, model: Int = KA_MODEL_CDJ2000): ByteArray {
         require(number in 1..255) { "device number must be 1..255: $number" }
         require(mac.size == 6) { "mac must be 6 bytes" }
         require(ip.size == 4) { "ip must be 4 bytes" }
+        require(model in 0..255) { "model byte must be 0..255: $model" }
         val p = KEEP_ALIVE_TEMPLATE.copyOf()
         putName(p, KEEP_ALIVE_NAME_OFFSET, name)
         p[KA_NUMBER] = number.toByte()
         mac.copyInto(p, KA_MAC)
         ip.copyInto(p, KA_IP)
+        p[KA_MODEL] = model.toByte()
         check(p.size == KEEP_ALIVE_SIZE)
         return p
     }

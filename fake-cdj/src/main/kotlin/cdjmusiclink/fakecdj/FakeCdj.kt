@@ -73,7 +73,7 @@ class FakeCdj(
     }
 
     private suspend fun keepAliveLoop(sock: DatagramSocket) {
-        val packet = Packets.keepAlive(config.name, config.number, iface.mac, iface.ip.address)
+        val packet = Packets.keepAlive(config.name, config.number, iface.mac, iface.ip.address, config.keepAliveModel)
         while (currentCoroutineContext().isActive) {
             send(sock, packet, iface.broadcast, 50000)
             delay(1500)
