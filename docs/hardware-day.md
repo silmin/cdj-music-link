@@ -28,7 +28,11 @@
 7. **now-playing(Xone:92 想定)** `isOnAir` が両方 null であること。2 台再生中に MASTER を切り替え → `/v1/now-playing` がマスター側に追従。両方 SYNC で MASTER なし → 番号の小さい方
 8. **切り替え競合** CDJ2 に CDJ1 と同じ曲をロード、続けて別曲へ素早く切り替え。`track` イベントが `null` を挟まず、`title` が数秒で埋まる
 9. **切断と復帰** CDJ1 の電源を落とす → `device` イベント `disconnected`、`online: true` のまま。入れ直して `connected`。次に Pi の LAN を抜いて `online: false`、挿し直して `online` イベントが 1 回
-10. **PC DJ 実験(時間があれば)** rekordbox の PC を LAN に参加させ、CDJ1 を USB 直結のコントロールモードにする。`/v1/devices` に rekordbox(番号 17 付近)が出るか、`/v1/players/1` に `track`(`slot: collection`)が出るか、`title` と拍が追従するか。出なければ Link Export か PC 側エージェントに切り替える判断材料として記録
+10. **rekordbox LINK EXPORT のキャプチャ(5 分、最優先で)** Pi で先に録り始める:
+    `sudo tcpdump -i eth0 -n -w ~/rb-nxs2-$(date +%F).pcap 'udp portrange 50000-50002 or tcp port 12523 or host <MacのIP>'`
+    → Mac を有線で DJ スイッチに挿し(Wi-Fi は切る)、rekordbox を EXPORT モードで起動 → LINK → パネルに CDJ-2000NXS2 が 2 台出ることを確認 → 曲をプレイヤー 1 にドラッグ → CDJ 1 で再生 → 30 秒待って Ctrl-C。
+    模擬 CDJ は rekordbox 7 に「- other device -」としか認識されず、本物の NXS2 が rekordbox に何を送っているか(握手、ステータスの中身)がこれで分かる。pcap は曲名を含むので公開しない
+11. **PC DJ 実験(時間があれば)** rekordbox の PC を LAN に参加させ、CDJ1 を USB 直結のコントロールモードにする。`/v1/devices` に rekordbox(番号 17 付近)が出るか、`/v1/players/1` に `track`(`slot: collection`)が出るか、`title` と拍が追従するか。出なければ Link Export か PC 側エージェントに切り替える判断材料として記録
 
 ## 記録して帰るもの
 

@@ -37,3 +37,10 @@ Task 10: review clean (deliverables); minor (deferred): Dockerfiles COPY . . bef
 - 「再生中なのに 90 秒イベントなし」の再接続規則は、ビートグリッドのない曲(拍イベントが来ない)で約 90 秒ごとの無駄な再接続を起こしうる(未確認)
 - 端末の「曖昧幅文字を全角で表示」設定では罫線やブロック文字がはみ出す可能性(未検証)
 - `.gitignore` の `tui/cdj-tui` と `tui/.gitignore` の `/cdj-tui` が重複
+
+## 模擬 CDJ と rekordbox 7(2026-11-09、自宅 macvlan 検証)
+- rekordbox 7.2.6(有線、番号 17)は模擬 CDJ 2 台を LINK パネルに出すが表示は「- other device -」で、曲をドラッグしてもロードコマンド(0x19)を送らない。ステータスは読んでいる(曲なしの BPM 0xffff が 999.95 と表示される)
+- 試して効かなかったもの: keep-alive 末尾バイト 0x35 を CDJ-2000 系の 00 に、プレイヤー側の握手(0x10 hello → 0x11、0x05 media query → 0x06、0x46 link ping)、0x16 への 0x17 応答、本物の CDJ-2000nexus キャプチャ由来の keep-alive/ステータス(名前 CDJ-2000nexus と CDJ-2000NXS2 の両方)
+- rekordbox から模擬 CDJ への個別通信は 0x16(48 バイト)のみで、TCP は来ない。0x46 link ping への 0x47 応答も返ってこなかった
+- 次の一手は会場で本物の NXS2 ↔ rekordbox の pcap を取ること(docs/hardware-day.md 手順 10)
+- fake-cdj: `FAKE_TRACK_ID=0` でも起動直後は「曲あり(id 0)」として status を出す。未ロードで起動する設定が要る
