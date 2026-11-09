@@ -19,6 +19,8 @@ data class FakeConfig(
      */
     /** Keep-alive byte 0x35 (see Packets.keepAlive); env FAKE_KA_MODEL as hex. */
     val keepAliveModel: Int = Packets.KA_MODEL_CDJ2000,
+    /** Packet byte templates: nexus (real CDJ-2000nexus capture, default) or beatlink. Env FAKE_TEMPLATE. */
+    val template: Packets.Template = Packets.Template.NEXUS,
     val linkRequestType: Int? = null,
     val linkReplyType: Int = 0x17,
     val linkReplyPayload: ByteArray = byteArrayOf(),
@@ -37,6 +39,7 @@ data class FakeConfig(
                 iface = env["FAKE_IFACE"]?.takeIf { it.isNotBlank() },
                 controlPort = env["FAKE_CONTROL_PORT"]?.toInt() ?: 17090,
                 sourcePlayer = env["FAKE_SOURCE_PLAYER"]?.takeIf { it.isNotBlank() }?.toInt(),
+                template = if (env["FAKE_TEMPLATE"]?.lowercase() == "beatlink") Packets.Template.BEAT_LINK else Packets.Template.NEXUS,
                 keepAliveModel = env["FAKE_KA_MODEL"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16) ?: Packets.KA_MODEL_CDJ2000,
                 linkRequestType = env["FAKE_LINK_REQUEST_TYPE"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16),
                 linkReplyType = env["FAKE_LINK_REPLY_TYPE"]?.takeIf { it.isNotBlank() }?.removePrefix("0x")?.toInt(16) ?: 0x17,

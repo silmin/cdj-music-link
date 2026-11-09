@@ -39,3 +39,8 @@ fake-cdj: the rekordbox LINK handshake packets (types 0x10, 0x05, 0x46 from a pl
 rekordbox) were laid out from wire captures of rekordbox 7 with a CDJ-3000 published as test data by the
 Slipmat project (https://github.com/yniverz/Slipmat, internal/prolink/testdata/rb7). Only the observed bytes
 were used as reference; no Slipmat source code (GPL-3.0-or-later) is included.
+
+fake-cdj: the default keep-alive and status packet templates (Packets.Template.NEXUS) are the wire bytes of a
+CDJ-2000nexus (firmware 1.44) from the hardware captures published in usr-ein/prolink
+(https://github.com/usr-ein/prolink, captures/S10-serve-to-cdj), with the device's name, number, MAC and IP
+cleared. Captured bytes are used as reference data only; no code from that repository (GPL-3.0) is included.

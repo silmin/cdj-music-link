@@ -104,11 +104,34 @@ class PacketsTest {
 
     @Test
     fun statusTemplateMatchesBeatLink() {
-        val b = Packets.status(params())
-        fun at(from: Int, to: Int) = b.copyOfRange(from, to).map { it.toInt() and 0xff }
-        // beat-link STATUS_PAYLOAD rows 0x0d0 and 0x110 (absolute offsets)
-        assertEquals(listOf(0x01, 0x01, 0x01, 0x01, 0x00), at(0xd8, 0xdd))
-        assertEquals(listOf(0x00, 0x15, 0x00, 0x00, 0x07, 0x61, 0x00, 0x00, 0x06, 0x2f), at(0x112, 0x11c))
+        Packets.template = Packets.Template.BEAT_LINK
+        try {
+            val b = Packets.status(params())
+            fun at(from: Int, to: Int) = b.copyOfRange(from, to).map { it.toInt() and 0xff }
+            // beat-link STATUS_PAYLOAD rows 0x0d0 and 0x110 (absolute offsets)
+            assertEquals(listOf(0x01, 0x01, 0x01, 0x01, 0x00), at(0xd8, 0xdd))
+            assertEquals(listOf(0x00, 0x15, 0x00, 0x00, 0x07, 0x61, 0x00, 0x00, 0x06, 0x2f), at(0x112, 0x11c))
+        } finally {
+            Packets.template = Packets.Template.NEXUS
+        }
+    }
+
+    @Test
+    fun nexusTemplateKeepsRealPlayerBytesAndParses() {
+        // default template is the real CDJ-2000nexus capture: nexus marker, firmware string, 4 pitch copies
+        val b = Packets.status(params(playing = true))
+        assertEquals(0x0f, b[0xcc].toInt() and 0xff)
+        assertEquals("1.44", String(b.copyOfRange(0x7c, 0x80), Charsets.US_ASCII))
+        for (off in listOf(0x8c, 0x98, 0xc0, 0xc4)) {
+            assertEquals(Packets.PITCH_NEUTRAL, java.nio.ByteBuffer.wrap(b, off, 4).int, "pitch copy at 0x%x".format(off))
+        }
+        val st = CdjStatus(datagram(b, 50002))
+        assertEquals(1, st.deviceNumber)
+        assertEquals(128.0, st.effectiveTempo, 0.001)
+        assertEquals(true, st.isPlaying)
+        val ka = DeviceAnnouncement(datagram(Packets.keepAlive("CDJ-2000nexus", 3, mac, ip), 50000))
+        assertEquals(3, ka.deviceNumber)
+        assertEquals("CDJ-2000nexus", ka.deviceName)
     }
 
     /** A load-track command laid out per djl-analysis "Loading Tracks": header, then D at 0x24, Dr/Sr/Tr at 0x28.., id at 0x2c, target at 0x40. */

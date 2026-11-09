@@ -96,6 +96,8 @@ object Packets {
     private const val ST_PITCH_A = 0x8c
     private const val ST_BPM = 0x92
     private const val ST_PITCH_B = 0x98
+    private const val ST_PITCH_C = 0xc0
+    private const val ST_PITCH_D = 0xc4
     private const val ST_P3 = 0x9d
     private const val ST_MASTER = 0x9e
     private const val ST_MASTER_HANDOFF = 0x9f
@@ -125,6 +127,29 @@ object Packets {
     private const val BT_NUMBER_B = 0x5f
 
     // Templates from beat-link VirtualCdj (keepAliveBytes, STATUS_PAYLOAD, BEAT_PAYLOAD).
+    /** Which byte templates to build packets from; see [Template]. */
+    @Volatile var template: Template = Template.NEXUS
+
+    /**
+     * NEXUS: a real CDJ-2000nexus (firmware 1.44) keep-alive and idle status packet, taken from the hardware
+     * captures published in usr-ein/prolink (captures/S10-serve-to-cdj). BEAT_LINK: the templates beat-link's
+     * VirtualCdj sends (EPL-2.0, see file header); rekordbox 7 lists a device built from them as "- other device -".
+     */
+    enum class Template { NEXUS, BEAT_LINK }
+
+    private val KEEP_ALIVE_TEMPLATE_NEXUS = hex(
+        "5173707431576d4a4f4c0600000000000000000000000000000000000000000001020036000100000000000000000000" +
+            "010000000100",
+    )
+    private val STATUS_PAYLOAD_NEXUS = hex(
+        "01040200f802000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+        "000000000000000000000000000000000000000000000000000100060400000000000000040001000000000000312e34" +
+        "3400000000000000020084fffe000fbc6a7fffffff7fffffff000fbc6a000000ffffffffff01ff000000000000000000" +
+        "0000000000000001000000000000000000000fbc6a000fbc6a0000643e0f010000123456780000000101010101020100" +
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
+        "00000000050000000000000000",
+    )
+
     private val KEEP_ALIVE_TEMPLATE = hex(
         "5173707431576d4a4f4c0600626561742d6c696e6b000000000000000000000001020036000100000000000000000000" +
             "020000000164",
@@ -151,7 +176,7 @@ object Packets {
         require(mac.size == 6) { "mac must be 6 bytes" }
         require(ip.size == 4) { "ip must be 4 bytes" }
         require(model in 0..255) { "model byte must be 0..255: $model" }
-        val p = KEEP_ALIVE_TEMPLATE.copyOf()
+        val p = (if (template == Template.NEXUS) KEEP_ALIVE_TEMPLATE_NEXUS else KEEP_ALIVE_TEMPLATE).copyOf()
         putName(p, KEEP_ALIVE_NAME_OFFSET, name)
         p[KA_NUMBER] = number.toByte()
         mac.copyInto(p, KA_MAC)
@@ -165,7 +190,7 @@ object Packets {
         require(p.number in 1..255) { "device number must be 1..255: ${p.number}" }
         require(p.beatWithinBar in 1..4) { "beatWithinBar must be 1..4: ${p.beatWithinBar}" }
         require(p.trackLoaded || !p.playing) { "cannot be playing without a loaded track" }
-        val b = packet(TYPE_STATUS, p.name, STATUS_PAYLOAD)
+        val b = packet(TYPE_STATUS, p.name, if (template == Template.NEXUS) STATUS_PAYLOAD_NEXUS else STATUS_PAYLOAD)
         val number = p.number.toByte()
         b[ST_NUMBER_A] = number
         b[ST_NUMBER_B] = number
@@ -188,6 +213,8 @@ object Packets {
         b[ST_P2] = (if (p.playing) 0x7a else 0x7e).toByte()
         putInt(b, ST_PITCH_A, p.pitch)
         putInt(b, ST_PITCH_B, p.pitch)
+        putInt(b, ST_PITCH_C, p.pitch)
+        putInt(b, ST_PITCH_D, p.pitch)
         b[ST_P3] = (if (p.playing) 9 else 1).toByte()
         b[ST_MASTER] = flag(p.master)
         b[ST_MASTER_HANDOFF] = NO_MASTER_HANDOFF.toByte()

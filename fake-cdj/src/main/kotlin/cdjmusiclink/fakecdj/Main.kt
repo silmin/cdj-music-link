@@ -2,6 +2,7 @@ package cdjmusiclink.fakecdj
 
 fun main() {
     val config = FakeConfig.fromEnv(System.getenv())
+    Packets.template = config.template
     val deck = Deck(config.bpm, config.trackId, config.slot, config.trackType, config.number, config.sourcePlayer)
     if (config.autoplay) deck.play(System.currentTimeMillis())
     // Real CDJs send and receive on the three fixed ports; binding them lets rekordbox treat us like one.
