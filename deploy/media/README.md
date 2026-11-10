@@ -1,10 +1,15 @@
 # media: 模擬 rekordbox USB(prolink serve)
 
-`deploy/compose.emu.yaml` の `media` プロファイルで動く、rekordbox で書き出した USB を DJ Link に出す仮想プレイヤー。中身は [prolink](https://github.com/usr-ein/prolink) の `prolink serve`(crate `prolink-cli` 0.5.0)。device 4 として名乗り、USB スロットに手元の USB の中身を載せる。`fake-cdj-1` がその曲を「device 4 の USB から読んだ」と報告するので、server の beat-link が device 4 からメタデータ・アートワーク・波形・ビートグリッドを取る。
+`deploy/compose.emu.yaml` の `media` プロファイルと `deploy/compose.public.yaml`(公開デモ、[`../public.md`](../public.md))で動く、rekordbox で書き出した USB を DJ Link に出す仮想プレイヤー。中身は [prolink](https://github.com/usr-ein/prolink) の `prolink serve`(crate `prolink-cli` 0.5.0)。device 4 として名乗り、USB スロットに手元の USB の中身を載せる。`fake-cdj-1` がその曲を「device 4 の USB から読んだ」と報告するので、server の beat-link が device 4 からメタデータ・アートワーク・波形・ビートグリッドを取る。
 
 ## ライセンス
 
-prolink は GPL-3.0-only。このイメージ(`cdj-music-link-media:dev`)は手元の模擬環境専用で、CI の `build-push` には載せない。リポジトリには Dockerfile だけを置き、prolink のソースやバイナリ、USB の中身は入れない。
+prolink は GPL-3.0-only。このイメージ(`cdj-music-link-media:dev`)は動かすホストでビルドし、CI の `build-push` には載せない。リポジトリには Dockerfile だけを置き、prolink のソースやバイナリ、USB の中身は入れない。
+
+## イメージの中身
+
+- `prolink`(既定の ENTRYPOINT): `serve` で USB を DJ Link に出し、`tracks` で曲一覧を出す。
+- `scenario`([`scenario.sh`](scenario.sh)): USB の曲を 2 台の fake-cdj に交互にロード・再生し続ける DJ 役。公開デモの `scenario` サービスが使う。設定はスクリプト先頭のコメントを参照。
 
 ## USB の `.PIONEER` について
 

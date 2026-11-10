@@ -1,0 +1,85 @@
+# 公開デモ: 模擬 CDJ 2 台 + 模擬 USB + server を無人で動かし続け、Cloudflare Tunnel 越しに
+# server の API だけを公開する。手順は deploy/public.md。
+#
+# ホストにはポートを一切公開しない。fake-cdj の操作 API(17090)は認証がないので、
+# このネットワークの中(scenario)からしか呼べないようにしている。
+name: cdj-music-link-public
+
+networks:
+  djlink:
+    driver: bridge
+
+x-common: &common
+  networks: [djlink]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+x-media-volumes: &media-volumes
+  # prolink は PIONEER/ で媒体を見つけ、export.pdb 内の解析パスは /.PIONEER/ なので両方に見せる。
+  - "${MEDIA_ROOT:?set MEDIA_ROOT}/.PIONEER:/media/PIONEER:ro"
+  - "${MEDIA_ROOT}/.PIONEER:/media/.PIONEER:ro"
+  - "${MEDIA_ROOT}/Contents:/media/Contents:ro"
+
+services:
+  fake-cdj-1:
+    <<: *common
+    image: ghcr.io/silmin/cdj-music-link-fake-cdj:latest
+    environment:
+      FAKE_NUMBER: "1"
+      FAKE_AUTOPLAY: "false"
+
+  fake-cdj-2:
+    <<: *common
+    image: ghcr.io/silmin/cdj-music-link-fake-cdj:latest
+    environment:
+      FAKE_NUMBER: "2"
+      FAKE_AUTOPLAY: "false"
+
+  # 模擬 rekordbox USB(prolink serve、GPL-3.0)。イメージはこのホストでビルドする。
+  media:
+    <<: *common
+    build:
+      context: media
+    image: cdj-music-link-media:dev
+    volumes: *media-volumes
+    command: ["serve", "--usb", "/media", "--number", "4", "--interface", "eth0", "-v"]
+
+  server:
+    <<: *common
+    image: ghcr.io/silmin/cdj-music-link-server:latest
+    environment:
+      LOG_LEVEL: info
+    depends_on:
+      # media(device 4)を先に起動して、server が 4 を取らないようにする。
+      - fake-cdj-1
+      - fake-cdj-2
+      - media
+
+  # DJ 役: USB の曲を 2 台に交互にロード・再生し続ける(deploy/media/scenario.sh)。
+  scenario:
+    <<: *common
+    build:
+      context: media
+    image: cdj-music-link-media:dev
+    entrypoint: ["scenario"]
+    volumes: *media-volumes
+    environment:
+      SWITCH_SEC: "${SWITCH_SEC:-45}"
+      OVERLAP_SEC: "${OVERLAP_SEC:-12}"
+      SHUFFLE: "${SHUFFLE:-1}"
+    depends_on:
+      - server
+
+  # 公開ホスト名 → http://server:17080 の対応は Cloudflare 側(Tunnel の Public Hostname)で設定する。
+  cloudflared:
+    <<: *common
+    image: cloudflare/cloudflared:latest
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:?set TUNNEL_TOKEN}"
+    depends_on:
+      - server

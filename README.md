@@ -7,7 +7,7 @@ Pioneer CDJ(Pro DJ Link)のプレイヤー状態を、読み取り専用の HTTP
 - `server`: Kotlin / Ktor + [beat-link](https://github.com/Deep-Symmetry/beat-link)。Pro DJ Link に仮想デバイスとして参加し、状態を JSON / SSE にする。
 - `fake-cdj`: 模擬 CDJ(keep-alive・ステータス・拍を送出)。実機なしの結合テスト用。
 - `openapi/openapi.yaml`: API 仕様。server が `/openapi.yaml` と `/docs`(Swagger UI)で配信する。
-- `deploy/compose.yaml`(Pi 用)と `deploy/compose.emu.yaml`(模擬環境用)。
+- `deploy/compose.yaml`(Pi 用)、`deploy/compose.emu.yaml`(模擬環境用)、`deploy/compose.public.yaml`(公開デモ用)。
 - イメージは GHCR(`ghcr.io/silmin/cdj-music-link-server`、`ghcr.io/silmin/cdj-music-link-fake-cdj`)。
 
 ## クイックスタート(模擬環境)
@@ -29,7 +29,7 @@ docker compose -f deploy/compose.emu.yaml --env-file deploy/media/.env --profile
 curl -s localhost:17080/v1/players/1 | jq .track.title
 ```
 
-`media` イメージは GPL-3.0 の prolink を含むため、手元の模擬環境専用で、GHCR には上げない。
+`media` イメージは GPL-3.0 の prolink を含むため、動かすホストでビルドし、GHCR には上げない。
 
 ### 動かし続けて眺める
 
@@ -38,6 +38,10 @@ scripts/emu-watch.sh [--beats] [--no-scenario] [--keep]
 ```
 
 模擬環境を起動したまま、SSE のイベントを 1 行ずつ(`HH:MM:SS` 付きで)表示する。`fake-cdj` の 2 台に曲を交互にロードする DJ 風シナリオも既定で流れる(`scenario:` 始まりの行)。`GET /v1/now-playing` の結果が変わると `now playing → player 1  "曲名" — アーティスト` も出る。Ctrl-C で `compose down` して終了。詳細は [`deploy/media/README.md`](deploy/media/README.md)。
+
+## 公開デモ
+
+模擬環境を Linux ホストで動かし続け、Cloudflare Tunnel 越しに API だけを公開する構成がある。USB の曲を 2 台に交互にかけ続ける DJ 役(`scenario`)が compose に入っていて、ホストにはポートを公開しない。手順は [`deploy/public.md`](deploy/public.md)。
 
 ## API
 
@@ -129,7 +133,7 @@ scripts/dev-setup-macos.sh   # macOS での開発セットアップ
 - CDJ-2000NXS2 は 30 ms 位置パケットを出さないため、再生位置は拍からの補間値。
 - Pro DJ Link 対応ミキサーが LAN にいなければ `isOnAir` は null。
 - 音声レベルは Pro DJ Link に乗らないため取れない。
-- 読み取り専用、認証なし。LAN 内での利用が前提。
+- 読み取り専用、認証なし。LAN 内での利用が前提(公開デモは模擬データだけを Tunnel 越しに出す)。
 - beat-link 8.0.0 の既知の問題(ビートグリッドのない曲で TimeFinder が NullPointerException をログに出す)。
 
 ## ライセンス
