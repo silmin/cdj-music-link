@@ -13,6 +13,18 @@ class EnumsTest {
         assertEquals(DeviceKind.collection, deviceKindOf(0x29))
     }
 
+    @Test
+    fun playingFromStateBytesWhenFlagIsOff() {
+        val p1 = org.deepsymmetry.beatlink.CdjStatus.PlayState1.PLAYING
+        val moving = org.deepsymmetry.beatlink.CdjStatus.PlayState2.MOVING
+        val stopped = org.deepsymmetry.beatlink.CdjStatus.PlayState2.STOPPED
+        assertEquals(true, isPlayingOf(true, org.deepsymmetry.beatlink.CdjStatus.PlayState1.PAUSED, stopped))
+        assertEquals(true, isPlayingOf(false, p1, moving))
+        assertEquals(true, isPlayingOf(false, org.deepsymmetry.beatlink.CdjStatus.PlayState1.LOOPING, moving))
+        assertEquals(false, isPlayingOf(false, p1, stopped))
+        assertEquals(false, isPlayingOf(false, org.deepsymmetry.beatlink.CdjStatus.PlayState1.PAUSED, moving))
+    }
+
     private fun state(
         playing: Boolean = false, paused: Boolean = false, cued: Boolean = false,
         searching: Boolean = false, atEnd: Boolean = false, busy: Boolean = false,

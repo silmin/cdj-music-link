@@ -2,6 +2,7 @@ package cdjmusiclink.server.link
 
 import cdjmusiclink.server.model.Device
 import cdjmusiclink.server.model.deviceKindOf
+import cdjmusiclink.server.model.isPlayingOf
 import cdjmusiclink.server.model.slotOf
 import cdjmusiclink.server.model.trackTypeOf
 import cdjmusiclink.server.state.BeatEvent
@@ -79,7 +80,7 @@ object Listeners {
     private var current: Attached? = null
 
     fun snapshotOf(s: CdjStatus): StatusSnapshot = StatusSnapshot(
-        playing = s.isPlaying,
+        playing = isPlayingOf(s),
         paused = s.isPaused,
         cued = s.isCued,
         looping = s.isLooping,

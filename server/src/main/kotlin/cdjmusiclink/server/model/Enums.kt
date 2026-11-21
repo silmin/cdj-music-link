@@ -58,8 +58,21 @@ fun playStateOf(
     else -> PlayState.paused
 }
 
+/**
+ * CDJ-2000NXS2 leaves the play flag (status byte 0x89, bit 6) off while it plays a track rekordbox has
+ * not analysed, so [CdjStatus.isPlaying] alone reports such a deck as stopped. The play-state bytes
+ * still say "playing" and "moving", so those count as playing too.
+ */
+fun isPlayingOf(flag: Boolean, state1: CdjStatus.PlayState1, state2: CdjStatus.PlayState2): Boolean =
+    flag || (
+        (state1 == CdjStatus.PlayState1.PLAYING || state1 == CdjStatus.PlayState1.LOOPING) &&
+            state2 == CdjStatus.PlayState2.MOVING
+        )
+
+fun isPlayingOf(s: CdjStatus): Boolean = isPlayingOf(s.isPlaying, s.playState1, s.playState2)
+
 fun playStateOf(s: CdjStatus): PlayState = playStateOf(
-    playing = s.isPlaying,
+    playing = isPlayingOf(s),
     paused = s.isPaused,
     cued = s.isCued,
     searching = s.isSearching,
