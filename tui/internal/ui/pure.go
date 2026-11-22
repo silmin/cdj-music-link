@@ -4,8 +4,12 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
+	"github.com/rivo/uniseg"
 	"github.com/silmin/cdj-music-link/tui/internal/model"
 )
 
@@ -128,8 +132,50 @@ func waveRow(w *model.WaveformPreview, pos *int64, durSec *int, width int) strin
 	return b.String()
 }
 
-// truncate cuts plain text s to at most w display cells, ending with … when cut.
+// cellWidth is the width of r on a terminal that advances per code point (wcwidth), which is
+// what most terminals do: combining marks and format characters take no cell.
+func cellWidth(r rune) int {
+	if unicode.In(r, unicode.Mn, unicode.Me, unicode.Cf) {
+		return 0
+	}
+	return runewidth.RuneWidth(r)
+}
+
+// stable reduces grapheme clusters whose width lipgloss and a per-code-point terminal disagree on
+// (Indic vowel signs, emoji ZWJ sequences, ...) to their first rune, so that the layout computed
+// here matches what the terminal draws. Text both sides agree on is returned unchanged.
+func stable(s string) string {
+	ascii := true
+	for i := 0; i < len(s); i++ {
+		if s[i] >= utf8.RuneSelf {
+			ascii = false
+			break
+		}
+	}
+	if ascii {
+		return s
+	}
+	var b strings.Builder
+	g := uniseg.NewGraphemes(s)
+	for g.Next() {
+		rs := g.Runes()
+		cells := 0
+		for _, r := range rs {
+			cells += cellWidth(r)
+		}
+		if len(rs) == 1 || cells == lipgloss.Width(g.Str()) {
+			b.WriteString(g.Str())
+		} else {
+			b.WriteRune(rs[0])
+		}
+	}
+	return b.String()
+}
+
+// truncate cuts plain text s to at most w display cells, ending with … when cut. The text is first
+// passed through stable, so everything drawn goes through the same width rules.
 func truncate(s string, w int) string {
+	s = stable(s)
 	if lipgloss.Width(s) <= w {
 		return s
 	}

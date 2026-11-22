@@ -273,3 +273,24 @@ func TestInterpolateAppliesClockOffset(t *testing.T) {
 		t.Fatalf("without offset: %v, want 17000", got)
 	}
 }
+
+func TestStableMatchesPerCodePointWidth(t *testing.T) {
+	for _, s := range []string{
+		"मैंने अपनी नाभि खोलने की कोशिश करना बंद कर दिया w/ dj dream diary",
+		"กำลังเล่น", "family 👨‍👩‍👧 flag 🇯🇵", "ボノボ が é", "plain ascii",
+	} {
+		got := stable(s)
+		cells := 0
+		for _, r := range got {
+			cells += cellWidth(r)
+		}
+		if w := lipgloss.Width(got); w != cells {
+			t.Errorf("stable(%q) = %q: lipgloss width %d, per-code-point width %d", s, got, w, cells)
+		}
+	}
+	for _, s := range []string{"plain ascii", "ボノボ", "夜の曲", "が", "é"} {
+		if got := stable(s); got != s {
+			t.Errorf("stable(%q) = %q, want unchanged", s, got)
+		}
+	}
+}

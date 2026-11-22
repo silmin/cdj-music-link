@@ -40,6 +40,7 @@ cd tui && go run ./cmd/cdj-tui
 - ヘッダ: `●online` / `○offline`、自分のプレイヤー番号、見えているデバイス、時刻。
 - NOW PLAYING: `/v1/now-playing` が選んだデッキの曲名・アーティスト・キー・BPM、進行バー(経過 / 全長)、`bar N  beat ●○○○`(今の拍を ● で示す)。何も再生していなければ `(nothing playing)`。
 - デッキ: `/v1/players` の 1 台が 1 箱。状態、MASTER / ON AIR、曲、`経過 / 全長  pitch`、波形行。1 行に `max(1, 幅/40)` 個並べ、入りきらない分はフッタに `+N decks hidden` と出る。
+- 文字幅: 端末と幅の解釈が食い違う文字(デーヴァナーガリーの母音記号、合成絵文字など)は書記素の先頭 1 文字だけを描く。
 - イベントログ: `HH:MM:SS` 付きで古い順に並び、最新が下。`link:` 始まりは接続状態。
 - フッタ: `q quit  b blink  w wave  stream:live|reconnecting`。
 
