@@ -44,3 +44,11 @@ Task 10: review clean (deliverables); minor (deferred): Dockerfiles COPY . . bef
 - rekordbox から模擬 CDJ への個別通信は 0x16(48 バイト)のみで、TCP は来ない。0x46 link ping への 0x47 応答も返ってこなかった
 - 次の一手は会場で本物の NXS2 ↔ rekordbox の pcap を取ること(docs/hardware-day.md 手順 10)
 - fake-cdj: `FAKE_TRACK_ID=0` でも起動直後は「曲あり(id 0)」として status を出す。未ロードで起動する設定が要る
+
+## 実機(CDJ-2000NXS2 ×3、2026-11-21 のイベント)で分かった点
+- rekordbox 未解析の曲(`track.type: unanalyzed`)は、再生中でもステータスの再生フラグ(0x89 の bit 6)が立たない。server は再生状態バイト(P1 が playing / looping かつ P2 が moving)でも再生中と判定する(`isPlayingOf`)
+- P1=`0x07`(P2 は moving)のデッキは `paused` のまま返る。CUE を押している間の再生と推測、未確認
+- 未解析の曲は拍パケット(50001)が来ないため、SSE の `beat`、波形、beatgrid は出ない(波形と beatgrid は 404)
+- 解析済みの曲はカラー波形が返る(preview は `style: rgb` の 1200 列、detail は 150 fps)
+- 色ラベルのない曲の `track.color` は `null` ではなく `{"name": "No Color" または "Unknown Color", "hex": "#000000"}` で返る
+- cdj-tui: デーヴァナーガリーなど、lipgloss の幅と端末の幅が食い違う文字は書記素の先頭 1 文字だけを描く(母音記号や合成絵文字の後続が落ちる)

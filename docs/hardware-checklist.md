@@ -18,7 +18,7 @@
 - [ ] USB の解析済み曲をロード → `/v1/players/{n}/track` の `title` が埋まるまで ____ 秒(NFS 経路)
 - [ ] CD または未解析曲をロード → `title` が埋まるまで ____ 秒(dbserver 経路。`deviceNumber` が 4 以下のときのみ)(模擬で確認済み: device 4 の dbserver から解析済み曲の `title` が数秒で埋まる)
 - [ ] 曲を切り替える / 同じ曲を別デッキにロードする → `track.title` が ____ 秒以内に埋まり、ロード中に `track: null` の `track` イベントが出ない
-- [ ] `/v1/players/{n}/artwork`、`/waveform/preview`、`/waveform/detail`、`/beatgrid` がデータを返す(模擬で確認済み: preview と beatgrid。prolink がカラー波形に応答しないため preview はブルー)
+- [ ] `/v1/players/{n}/artwork`、`/waveform/preview`、`/waveform/detail`、`/beatgrid` がデータを返す(模擬で確認済み: preview と beatgrid。prolink がカラー波形に応答しないため preview はブルー。実機では解析済みの曲でカラー波形が返る。未解析の曲は 404)
 
 ## 再生状態
 
